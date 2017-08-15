@@ -1,6 +1,23 @@
 "use strict";
-chrome.storage.local.get({'pf_vkaccess_token': {}}, function (items) {
-    if (items.pf_vkaccess_token.length === undefined) {
+const VK_ACCESS_TOKEN_STORAGE_KEY = 'pf_vkaccess_token';
+chrome.storage.local.get({[VK_ACCESS_TOKEN_STORAGE_KEY]: {}}, function (items) {
+    let needAuth = false;
+    let vkAccessToken = items[VK_ACCESS_TOKEN_STORAGE_KEY];
+    if(vkAccessToken.length !== undefined) {
+        let xhr = new XMLHttpRequest();
+        xhr.open('GET', 'https://api.vk.com/method/secure.checkToken?token=' + vkAccessToken + '&v=5.67', true);
+        xhr.send();
+        xhr.onreadystatechange = function () {
+            if(xhr.readyState === 4) {
+                if (xhr.status === 200) {
+                    console.log(xhr.responseText);
+                } else {
+                    console.log(xhr.status + ": " + xhr.statusText);
+                }
+            }
+        };
+    }
+    if (needAuth) {
         // We need to insert button for VK auth.
         let authBtnWrapper = document.createElement("div");
         let authBtn = document.createElement("button");
@@ -10,23 +27,46 @@ chrome.storage.local.get({'pf_vkaccess_token': {}}, function (items) {
         document.body.appendChild(authBtnWrapper);
         authBtn.addEventListener("click", function () {
             chrome.runtime.sendMessage({action: "auth"}, function (response) {
-                console.log("oops");
-                alert(response);
-                // if(response.error !== undefined) {
-                //     showErrors([response.error]);
-                // } else {
-                //     if(response.token !== undefined) {
-                //         console.log(response);
-                //         chrome.storage.local.set({'pf_vkaccess_token': response.token});
-                //     } else {
-                //         showErrors(["Oops! Something went wrong. Token is not sent."]);
-                //     }
-                // }
+
             });
 
         });
     } else {
-        showErrors(["authorised"])
+        chrome.tabs.query({'active': true, 'lastFocusedWindow': true}, function (tabs) {
+            let url = tabs[0].url;
+            let urlParser = document.createElement('a');
+            urlParser.href = url;
+            let messageId = "";
+            if (urlParser.hostname === "vk.com") {
+                // Remove ? symbol.
+                let paramsKeysValues = urlParser.search.substring(1).split("&");
+                console.log(paramsKeysValues);
+                for (let i = 0; i < paramsKeysValues.length; i++) {
+                    let paramKeyValue = paramsKeysValues[i].split("=");
+                    console.log(paramKeyValue);
+                    if (paramKeyValue[0] === "sel")
+                        messageId = paramKeyValue[1];
+                }
+            }
+            console.log(messageId);
+            if(messageId !== "") {
+                let xhr = new XMLHttpRequest();
+                xhr.open('GET', 'https://api.vk.com/method/users.get?user_id=210700286&v=5.52', true);
+                xhr.send();
+                xhr.onreadystatechange = function () {
+                    if(xhr.readyState === 4) {
+                        if (xhr.status === 200) {
+                            console.log(xhr.responseText);
+                        } else {
+                            console.log(xhr.status + ": " + xhr.statusText);
+                        }
+                    }
+                };
+
+            }
+
+
+        });
     }
 });
 
