@@ -3,7 +3,6 @@ const VK_ACCESS_TOKEN_STORAGE_KEY = 'pf_vkaccess_token';
 const VK_API_URL = "https://api.vk.com/method";
 const VK_API_VERSION = "5.68";
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-    console.log(sender);
     if (request.action !== undefined) {
         if (request.action === "auth") {
             let registerLink = "https://oauth.vk.com/authorize?client_id=6141259&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=messages&response_type=token&v=5.67&state=123456";
@@ -44,6 +43,9 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
                         let vkAccessToken = items[VK_ACCESS_TOKEN_STORAGE_KEY];
                         let apiRequestUrl = VK_API_URL + '/messages.getHistoryAttachments?peer_id=' + peerId +
                             '&access_token=' + vkAccessToken + '&media_type=photo&v=' + VK_API_VERSION;
+                        if (request.nextFrom !== undefined && request.nextFrom !== "0") {
+                            apiRequestUrl += "&start_from=" + request.nextFrom;
+                        }
                         let xhr = new XMLHttpRequest();
                         xhr.open('GET', apiRequestUrl, true);
                         xhr.send();
