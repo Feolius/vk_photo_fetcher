@@ -27,11 +27,11 @@ chrome.tabs.query({'active': true, 'lastFocusedWindow': true}, function (tabs) {
 
         });
     } else {
-        showErrors(["In order to fetch photos you need to be on a message page."])
+        displayErrors(["In order to fetch photos you need to be on a message page."]);
     }
 });
 
-function showErrors(errors) {
+function displayErrors(errors) {
     let errorsContainer = document.getElementById("errors-container");
     while (errorsContainer.firstChild !== null) {
         errorsContainer.removeChild(errorsContainer.firstChild);

@@ -1,6 +1,7 @@
 "use strict";
 const VK_ACCESS_TOKEN_STORAGE_KEY = 'pf_vkaccess_token';
 $(function () {
+    initLayout();
     let currentUrl = window.location.href;
     let urlParser = document.createElement('a');
     urlParser.href = currentUrl;
@@ -14,13 +15,30 @@ $(function () {
     }
 
     chrome.storage.local.get({[VK_ACCESS_TOKEN_STORAGE_KEY]: {}}, function (items) {
+        let imagesContainer = $('.images-container');
+        let select = $('<select multiple="multiple" class="photo-select image-picker masonry">');
+
+        function pushPhotosIntoSelect(photos) {
+            for (let id in photos) {
+                if (photos.hasOwnProperty(id)) {
+                    let photo = photos[id];
+                    select.append('<option data-img-src="' + photo.photo_604 + '" value="' + id + '">Option' + id + '</option>');
+                }
+            }
+            select.imagepicker();
+            let pickerContainer = select.next("ul.thumbnails");
+            pickerContainer.imagesLoaded(function () {
+                pickerContainer.masonry({
+                    itemSelector: "li",
+                });
+            });
+        }
+
         if (items[VK_ACCESS_TOKEN_STORAGE_KEY].length === undefined) {
-            let container = $(".container");
-            container.empty();
-            let errorContainer = $('<div class="errors-container bg-danger"></div>');
-            container.append(errorContainer);
-            container.append('<div class="text-primary">Authorization needed. Click to authorize in VK.</div>');
+            initLayout();
+            displayErrors(["Authorisation needed. Click to authorize in VK."]);
             let authBtn = $('<button type="button" class="btn btn-primary vk-auth-btn">VK auth</button>');
+            let container = $(".container");
             container.append(authBtn);
             authBtn.click(function () {
                 chrome.runtime.sendMessage({action: "auth"}, function (response) {
@@ -32,43 +50,29 @@ $(function () {
                 });
             });
         } else {
+            imagesContainer.append(select);
             let photoFetcher = new PhotoFetcher();
-            buildGrid(photoFetcher);
-        }
-    });
-
-    function buildGrid(photoFetcher) {
-        if(photoFetcher instanceof PhotoFetcher) {
-            photoFetcher.fetchNext(function (photos) {
-                let container = $(".container");
-                container.empty();
-                let imageContainer = $('<div class="image-container"></div>');
-                container.append(imageContainer);
-                imageContainer.append('<select multiple="multiple" class="photo-select image-picker masonry">');
-                let select = $(".photo-select");
-                for (let id in photos) {
-                    if (photos.hasOwnProperty(id)) {
-                        let photo = photos[id];
-                        select.append('<option data-img-src="' + photo.photo_604 + '" value="' + id + '">Option' + id + '</option>');
-                    }
-                }
-                select.imagepicker();
-                let pickerContainer = select.next("ul.thumbnails");
-                pickerContainer.imagesLoaded(function () {
-                    pickerContainer.masonry({
-                        itemSelector: "li",
+            photoFetcher.fetchNext(pushPhotosIntoSelect);
+            let btnWrapper = $('.btn-wrapper');
+            let moreBtn = $('<button type="button" class="btn btn-primary vk-auth-btn">Get more photos</button>');
+            btnWrapper.append(moreBtn);
+            moreBtn.click(function () {
+                photoFetcher.fetchNext(pushPhotosIntoSelect);
+            });
+            let downloadBtn = $('<button type="button" class="btn btn-primary download-btn">Download</button>');
+            btnWrapper.append(downloadBtn);
+            downloadBtn.click(function () {
+                select.children('option:selected').each(function (index) {
+                    let id = this.value;
+                    let photo = photoFetcher.photos[id];
+                    let link = getPhotoBestResolutionLink(photo);
+                    chrome.downloads.download({
+                        url: link
                     });
-                });
-                let btnWrapper = $('<div class="btn-wrapper"></div>');
-                container.append(btnWrapper);
-                let moreBtn = $('<button type="button" class="btn btn-primary vk-auth-btn">Download more</button>');
-                btnWrapper.append(moreBtn);
-                moreBtn.click(function () {
-                    buildGrid(photoFetcher);
                 });
             });
         }
-    }
+    });
 
     function PhotoFetcher() {
         this.photos = [];
@@ -77,31 +81,66 @@ $(function () {
 
     PhotoFetcher.prototype.fetchNext = function (callback) {
         let self = this;
-        chrome.runtime.sendMessage({action: "fetchPhotoAttachments", messageId: messageId, nextFrom: this._nextFrom}, function (response) {
+        chrome.runtime.sendMessage({
+            action: "fetchPhotoAttachments",
+            messageId: messageId,
+            nextFrom: this._nextFrom
+        }, function (response) {
             if (response.error !== undefined) {
                 if (response.error.error_code !== undefined && response.error.error_code === 5) {
                     chrome.storage.local.remove(VK_ACCESS_TOKEN_STORAGE_KEY, function () {
                         location.reload(true);
                     });
                 } else {
-                    let container = $(".container");
-                    container.empty();
-                    container.append('<div class="bg-danger">Photo fetch error: ' + response.error + '</div>');
+                    displayErrors(['Photo fetch error: ' + response.error]);
                 }
             } else if (response.result !== undefined) {
                 let items = response.result.items;
                 // Get rid of duplicates here using photo id.
+                let photos = [];
                 for (let i = 0, j = items.length; i < j; i++) {
                     let photo = items[i].attachment.photo;
                     self.photos[photo.id] = photo;
+                    photos[photo.id] = photo;
                 }
                 self._nextFrom = response.result.next_from;
-                callback.call(self, self.photos);
+                callback.call(self, photos);
 
                 console.log(response.result);
             }
 
         });
+    };
+
+    function displayErrors(errors) {
+        let errorsContainer = $('.errors-container');
+        errorsContainer.empty();
+        for (let i = 0, j = errors.length; i < j; i++) {
+            errorsContainer.append('<div class="error">' + errors[i] + '</div>');
+        }
+    }
+
+    function initLayout() {
+        let container = $(".container");
+        container.empty();
+        let errorContainer = $('<div class="errors-container bg-danger"></div>');
+        container.append(errorContainer);
+        let imagesContainer = $('<div class="images-container"></div>');
+        container.append(imagesContainer);
+        let btnWrapper = $('<div class="btn-wrapper"></div>');
+        container.append(btnWrapper);
+    }
+
+    function getPhotoBestResolutionLink(photo) {
+        let link = "";
+        let sizePriorities = ["2560", "1280", "807", "604", "130", "75"];
+        for (let i = 0, j = sizePriorities.length; i < j; i++) {
+            if(photo["photo_" + sizePriorities[i]] !== undefined) {
+                link = photo["photo_" + sizePriorities[i]];
+                break;
+            }
+        }
+        return link;
     }
 
 });
