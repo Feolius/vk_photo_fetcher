@@ -1,5 +1,6 @@
 "use strict";
 const VK_ACCESS_TOKEN_STORAGE_KEY = 'pf_vkaccess_token';
+const GOOGLE_AUTH_TOKEN_STORAGE_KEY = 'pf_google_access_token';
 $(function () {
     initLayout();
     let currentUrl = window.location.href;
@@ -43,7 +44,8 @@ $(function () {
             authBtn.click(function () {
                 chrome.runtime.sendMessage({action: "auth"}, function (response) {
                     if (response.error !== undefined) {
-                        errorContainer.html(response.error);
+                        initLayout();
+                        displayErrors([response.error]);
                     } else {
                         location.reload(true);
                     }
@@ -58,6 +60,24 @@ $(function () {
             btnWrapper.append(moreBtn);
             moreBtn.click(function () {
                 photoFetcher.fetchNext(pushPhotosIntoSelect);
+            });
+            let googlePhotosBtn = $('<button type="button" class="btn btn-primary google-photos-btn">Google photos test</button>');
+            btnWrapper.append(googlePhotosBtn);
+            googlePhotosBtn.click(function () {
+                chrome.identity.getAuthToken({
+                    interactive: true
+                }, function(token) {
+                    if (chrome.runtime.lastError) {
+                        console.log(chrome.runtime.lastError.message);
+                    }
+                    console.log(token);
+                    // var x = new XMLHttpRequest();
+                    // x.open('GET', 'https://www.googleapis.com/oauth2/v2/userinfo?alt=json&access_token=' + token);
+                    // x.onload = function() {
+                    //     alert(x.response);
+                    // };
+                    // x.send();
+                });
             });
             let downloadBtn = $('<button type="button" class="btn btn-primary download-btn">Download</button>');
             btnWrapper.append(downloadBtn);

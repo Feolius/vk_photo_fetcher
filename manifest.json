@@ -8,10 +8,14 @@
     "default_icon": "icon.png",
     "default_popup": "popup.html"
   },
+  "oauth2": {
+    "client_id": "817246382180-k6e5fcupn64uqfbvedubouh29ntchdnp.apps.googleusercontent.com",
+    "scopes": ["https://www.googleapis.com/auth/drive"]
+  },
 
   "background": {
     "scripts": ["background.js"],
     "persistent": true
   },
-  "permissions": [ "tabs", "storage", "downloads", "http://*/*", "https://*/*" ]
+  "permissions": [ "tabs", "storage", "downloads", "identity" ,"http://*/*", "https://*/*" ]
 }
