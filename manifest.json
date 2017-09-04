@@ -3,13 +3,14 @@
 
   "name": "VK photo fetcher",
   "description": "This extension extract images from VK chats and save it in Google Photo Album",
-  "version": "1.0",
+  "version": "0.0.1",
   "browser_action": {
     "default_icon": "icon.png",
     "default_popup": "popup.html"
   },
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAjlAXnE2zA5P/VK3KhuvDLPjkc//Yo7mYm1m47yxehAwRVSoLAkKy0XLmDDYEHkAytqyNbhP+ecXgflQJ3EVdq5FTm7MHeMJaJUrjL+4AsS8CwptV0V8rPGX8JvgCfMCrH95CdyMyUOP6B9aCcvzeV8/Afhxv63JdXORY8iJV3L0C5eKzeevEnYOS/MtLCuvlm74LoX5AZ3iz9byJGDuBik9Mvtm88PZ4FrhH3FNNT1NU2agCbMJN6X2TBUAdeebAsZvBwm4UKkyX/LOyuIQIQAq8aLQGRg5y7bqOpgZ4pcLzgFZwIpFl/wkSKLJWORCoL+tk3NX9tWB11g3bdO6kIwIDAQAB",
   "oauth2": {
-    "client_id": "817246382180-k6e5fcupn64uqfbvedubouh29ntchdnp.apps.googleusercontent.com",
+    "client_id": "817246382180-p1he82d7eo7lvvepcbjoh9v95kgls4mt.apps.googleusercontent.com",
     "scopes": ["https://www.googleapis.com/auth/drive"]
   },
 
