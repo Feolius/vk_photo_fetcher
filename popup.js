@@ -16,9 +16,13 @@ chrome.tabs.query({'active': true, 'lastFocusedWindow': true}, function (tabs) {
     if(messageId !== "") {
         let fetchBtnWrapper = document.createElement("div");
         let fetchBtn = document.createElement("button");
-        let fetchBtnText = document.createTextNode("Fetch");
+        let fetchBtnText = document.createTextNode("Get photos");
         fetchBtn.appendChild(fetchBtnText);
+        fetchBtn.classList.add("btn");
+        fetchBtn.classList.add("btn-primary");
         fetchBtnWrapper.appendChild(fetchBtn);
+        let container = document.getElementsByClassName("container");
+        container[0].appendChild(fetchBtnWrapper);
         document.body.appendChild(fetchBtnWrapper);
         fetchBtn.addEventListener("click", function () {
             chrome.tabs.create({url: "fetch.html?messageId=" + messageId, selected: true}, function (tab) {

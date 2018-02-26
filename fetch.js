@@ -1,6 +1,5 @@
 "use strict";
 const VK_ACCESS_TOKEN_STORAGE_KEY = 'pf_vkaccess_token';
-const GOOGLE_AUTH_TOKEN_STORAGE_KEY = 'pf_google_access_token';
 $(function () {
     initLayout();
     let currentUrl = window.location.href;
@@ -17,9 +16,8 @@ $(function () {
 
     chrome.storage.local.get({[VK_ACCESS_TOKEN_STORAGE_KEY]: {}}, function (items) {
         let imagesContainer = $('.images-container');
-        let select = $('<select multiple="multiple" class="photo-select image-picker masonry">');
 
-        function pushPhotosIntoSelect(photos) {
+        function pushPhotosIntoSelect(photos, select) {
             for (let id in photos) {
                 if (photos.hasOwnProperty(id)) {
                     let photo = photos[id];
@@ -52,37 +50,35 @@ $(function () {
                 });
             });
         } else {
+            let selectClass = 'photo-select';
+            let selectTag = '<select multiple="multiple" class="image-picker masonry">';
+            let select = $(selectTag);
+            select.addClass(selectClass);
             imagesContainer.append(select);
             let photoFetcher = new PhotoFetcher();
-            photoFetcher.fetchNext(pushPhotosIntoSelect);
+            photoFetcher.fetchNext(function (photos) {
+                pushPhotosIntoSelect(photos, select);
+            });
             let btnWrapper = $('.btn-wrapper');
-            let moreBtn = $('<button type="button" class="btn btn-primary vk-auth-btn">Get more photos</button>');
+            let moreBtn = $('<button type="button" class="btn btn-primary more-btn">Get more photos</button>');
             btnWrapper.append(moreBtn);
             moreBtn.click(function () {
-                photoFetcher.fetchNext(pushPhotosIntoSelect);
-            });
-            let googlePhotosBtn = $('<button type="button" class="btn btn-primary google-photos-btn">Google photos test</button>');
-            btnWrapper.append(googlePhotosBtn);
-            googlePhotosBtn.click(function () {
-                chrome.identity.getAuthToken({
-                    interactive: true
-                }, function(token) {
-                    if (chrome.runtime.lastError) {
-                        console.log(chrome.runtime.lastError.message);
-                    }
-                    console.log(token);
-                    // var x = new XMLHttpRequest();
-                    // x.open('GET', 'https://www.googleapis.com/oauth2/v2/userinfo?alt=json&access_token=' + token);
-                    // x.onload = function() {
-                    //     alert(x.response);
-                    // };
-                    // x.send();
+                let divider = $('<hr />');
+                imagesContainer.append(divider);
+                let select = $(selectTag);
+                select.addClass(selectClass);
+                imagesContainer.append(select);
+                photoFetcher.fetchNext(function (photos) {
+                    pushPhotosIntoSelect(photos, select);
+                    $('html, body').animate({
+                        scrollTop: divider.offset().top
+                    }, 1000);
                 });
             });
             let downloadBtn = $('<button type="button" class="btn btn-primary download-btn">Download</button>');
             btnWrapper.append(downloadBtn);
             downloadBtn.click(function () {
-                select.children('option:selected').each(function (index) {
+                $('.' + selectClass).children('option:selected').each(function (index) {
                     let id = this.value;
                     let photo = photoFetcher.photos[id];
                     let link = getPhotoBestResolutionLink(photo);
@@ -125,8 +121,6 @@ $(function () {
                 }
                 self._nextFrom = response.result.next_from;
                 callback.call(self, photos);
-
-                console.log(response.result);
             }
 
         });
