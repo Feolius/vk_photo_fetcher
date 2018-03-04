@@ -1,0 +1,26 @@
+{
+  "extName": {
+    "message": "VK dialog photo fetcher"
+  },
+  "extDescription": {
+    "message": "Extension provides a convenient way of saving photos from VK dialogs"
+  },
+  "outOfDialogPageMsg": {
+    "message": "In order to fetch photos you need to be on a message page."
+  },
+  "getPhotosBtnTxt": {
+    "message": "Get photos"
+  },
+  "getMorePhotosBtnTxt": {
+    "message": "Get more photos"
+  },
+  "downloadBtnTxt": {
+    "message": "Download"
+  },
+  "authNeededMsg": {
+    "message": "Authorisation needed. Click to authorize in VK."
+  },
+  "authBtnTxt": {
+    "message": "VK auth"
+  }
+}

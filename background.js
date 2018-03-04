@@ -6,9 +6,9 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (request.action !== undefined) {
         if (request.action === "auth") {
             let registerLink = "https://oauth.vk.com/authorize?client_id=6141259&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=messages&response_type=token&v=5.67&state=123456";
-            chrome.tabs.create({url: registerLink, selected: true}, function (tab) {
-                chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
-                    if (tab.id === tabId && changeInfo.status !== undefined && changeInfo.status === "loading") {
+            chrome.tabs.create({url: registerLink, selected: true}, function (authTab) {
+                function authTabUpdateCb(tabId, changeInfo, tab) {
+                    if (authTab.id === tabId && changeInfo.status !== undefined && changeInfo.status === "loading") {
                         let vkAccessToken = fetchParamValueFromUrl(changeInfo.url, "access_token");
                         let response = {result: "Ok"};
                         if (vkAccessToken !== "") {
@@ -21,10 +21,12 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
                             response = {error: error};
                         }
                         chrome.tabs.remove(tabId, function () {
+                            chrome.tabs.onUpdated.removeListener(authTabUpdateCb);
                             sendResponse(response);
                         });
                     }
-                });
+                }
+                chrome.tabs.onUpdated.addListener(authTabUpdateCb);
             });
             return true;
         }

@@ -16,7 +16,7 @@ chrome.tabs.query({'active': true, 'lastFocusedWindow': true}, function (tabs) {
     if(messageId !== "") {
         let fetchBtnWrapper = document.createElement("div");
         let fetchBtn = document.createElement("button");
-        let fetchBtnText = document.createTextNode("Get photos");
+        let fetchBtnText = document.createTextNode(chrome.i18n.getMessage("getPhotosBtnTxt"));
         fetchBtn.appendChild(fetchBtnText);
         fetchBtn.classList.add("btn");
         fetchBtn.classList.add("btn-primary");
@@ -25,13 +25,11 @@ chrome.tabs.query({'active': true, 'lastFocusedWindow': true}, function (tabs) {
         container[0].appendChild(fetchBtnWrapper);
         document.body.appendChild(fetchBtnWrapper);
         fetchBtn.addEventListener("click", function () {
-            chrome.tabs.create({url: "fetch.html?messageId=" + messageId, selected: true}, function (tab) {
-
-            });
+            chrome.tabs.create({url: "fetch.html?messageId=" + messageId, selected: true}, function (tab) {});
 
         });
     } else {
-        displayErrors(["In order to fetch photos you need to be on a message page."]);
+        displayErrors([chrome.i18n.getMessage("outOfDialogPageMsg")]);
     }
 });
 

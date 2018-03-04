@@ -35,8 +35,9 @@ $(function () {
 
         if (items[VK_ACCESS_TOKEN_STORAGE_KEY].length === undefined) {
             initLayout();
-            displayErrors(["Authorisation needed. Click to authorize in VK."]);
-            let authBtn = $('<button type="button" class="btn btn-primary vk-auth-btn">VK auth</button>');
+            displayErrors([chrome.i18n.getMessage("authNeededMsg")]);
+            let authBtn = $('<button type="button" class="btn btn-primary vk-auth-btn">' +
+                chrome.i18n.getMessage("authBtnTxt") + '</button>');
             let container = $(".container");
             container.append(authBtn);
             authBtn.click(function () {
@@ -60,7 +61,8 @@ $(function () {
                 pushPhotosIntoSelect(photos, select);
             });
             let btnWrapper = $('.btn-wrapper');
-            let moreBtn = $('<button type="button" class="btn btn-primary more-btn">Get more photos</button>');
+            let moreBtn = $('<button type="button" class="btn btn-primary more-btn">' +
+                chrome.i18n.getMessage("getMorePhotosBtnTxt") + '</button>');
             btnWrapper.append(moreBtn);
             moreBtn.click(function () {
                 let divider = $('<hr />');
@@ -75,7 +77,8 @@ $(function () {
                     }, 1000);
                 });
             });
-            let downloadBtn = $('<button type="button" class="btn btn-primary download-btn">Download</button>');
+            let downloadBtn = $('<button type="button" class="btn btn-primary download-btn">' +
+                chrome.i18n.getMessage("downloadBtnTxt") + '</button>');
             btnWrapper.append(downloadBtn);
             downloadBtn.click(function () {
                 $('.' + selectClass).children('option:selected').each(function (index) {
