@@ -1,11 +1,12 @@
 "use strict";
 const VK_ACCESS_TOKEN_STORAGE_KEY = 'pf_vkaccess_token';
 const VK_API_URL = "https://api.vk.com/method";
-const VK_API_VERSION = "5.68";
+const VK_API_VERSION = "5.73";
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (request.action !== undefined) {
         if (request.action === "auth") {
-            let registerLink = "https://oauth.vk.com/authorize?client_id=6141259&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=messages&response_type=token&v=5.67&state=123456";
+            let registerLink = "https://oauth.vk.com/authorize?client_id=6141259&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=messages&response_type=token&v="
+                + VK_API_VERSION + "&state=123456";
             chrome.tabs.create({url: registerLink, selected: true}, function (authTab) {
                 function authTabUpdateCb(tabId, changeInfo, tab) {
                     if (authTab.id === tabId && changeInfo.status !== undefined && changeInfo.status === "loading") {
