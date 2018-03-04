@@ -14,6 +14,10 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
                         let response = {result: "Ok"};
                         if (vkAccessToken !== "") {
                             chrome.storage.local.set({[VK_ACCESS_TOKEN_STORAGE_KEY]: vkAccessToken});
+                            chrome.tabs.remove(tabId, function () {
+                                chrome.tabs.onUpdated.removeListener(authTabUpdateCb);
+                                sendResponse(response);
+                            });
                         } else {
                             let error = fetchParamValueFromUrl(changeInfo.url, "error_description");
                             if (error === "") {
@@ -21,10 +25,6 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
                             }
                             response = {error: error};
                         }
-                        chrome.tabs.remove(tabId, function () {
-                            chrome.tabs.onUpdated.removeListener(authTabUpdateCb);
-                            sendResponse(response);
-                        });
                     }
                 }
                 chrome.tabs.onUpdated.addListener(authTabUpdateCb);
