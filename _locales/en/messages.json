@@ -22,5 +22,8 @@
   },
   "authBtnTxt": {
     "message": "VK auth"
+  },
+  "photosCounterLabel": {
+    "message": "Photos chosen:"
   }
 }

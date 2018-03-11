@@ -22,5 +22,8 @@
   },
   "authBtnTxt": {
     "message": "Авторизация"
+  },
+  "photosCounterLabel": {
+    "message": "Фотографий выбрано:"
   }
 }

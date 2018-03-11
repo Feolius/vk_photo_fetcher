@@ -16,6 +16,7 @@ $(function () {
 
     chrome.storage.local.get({[VK_ACCESS_TOKEN_STORAGE_KEY]: {}}, function (items) {
         let imagesContainer = $('.images-container');
+        let photosChosenCounter = 0;
 
         function pushPhotosIntoSelect(photos, select) {
             for (let id in photos) {
@@ -24,7 +25,17 @@ $(function () {
                     select.append('<option data-img-src="' + photo.photo_604 + '" value="' + id + '">Option' + id + '</option>');
                 }
             }
-            select.imagepicker();
+            select.imagepicker({
+                changed: function (oldValues, newValues) {
+                    photosChosenCounter = photosChosenCounter + newValues.length - oldValues.length;
+                    $('.photos-chosen-counter').html(photosChosenCounter);
+                    if(photosChosenCounter === 0) {
+                        $('.download-btn').prop("disabled", true);
+                    } else {
+                        $('.download-btn').prop("disabled", false);
+                    }
+                }
+            });
             let pickerContainer = select.next("ul.thumbnails");
             pickerContainer.imagesLoaded(function () {
                 pickerContainer.masonry({
@@ -61,6 +72,9 @@ $(function () {
                 pushPhotosIntoSelect(photos, select);
             });
             let btnWrapper = $('.btn-wrapper');
+            let btnLabelWrapper = $('<div class="btn-label-wrapper">' + chrome.i18n.getMessage("photosCounterLabel") +
+                '<span class="photos-chosen-counter">0</span></div>');
+            btnWrapper.append(btnLabelWrapper);
             let moreBtn = $('<button type="button" class="btn btn-primary more-btn">' +
                 chrome.i18n.getMessage("getMorePhotosBtnTxt") + '</button>');
             btnWrapper.append(moreBtn);
@@ -77,7 +91,7 @@ $(function () {
                     }, 1000);
                 });
             });
-            let downloadBtn = $('<button type="button" class="btn btn-primary download-btn">' +
+            let downloadBtn = $('<button type="button" class="btn btn-primary download-btn" disabled>' +
                 chrome.i18n.getMessage("downloadBtnTxt") + '</button>');
             btnWrapper.append(downloadBtn);
             downloadBtn.click(function () {
