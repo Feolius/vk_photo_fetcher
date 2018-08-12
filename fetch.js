@@ -1,6 +1,6 @@
-"use strict";
 const VK_ACCESS_TOKEN_STORAGE_KEY = 'pf_vkaccess_token';
 $(function () {
+    "use strict";
     initLayout();
     let currentUrl = window.location.href;
     let urlParser = document.createElement('a');
@@ -14,9 +14,45 @@ $(function () {
         }
     }
 
-    chrome.storage.local.get({[VK_ACCESS_TOKEN_STORAGE_KEY]: {}}, function (items) {
-        let imagesContainer = $('.images-container');
+    chrome.storage.local.get({[VK_ACCESS_TOKEN_STORAGE_KEY]: {}}, (items) => {
+        const imagesContainer = $('.images-container');
         let photosChosenCounter = 0;
+
+        class PhotoFetcher {
+            constructor() {
+                this.photos = [];
+                this._nextFrom = "0";
+            }
+
+            fetchNext(callback) {
+                chrome.runtime.sendMessage({
+                    action: "fetchPhotoAttachments",
+                    messageId: messageId,
+                    nextFrom: this._nextFrom
+                }, (response) => {
+                    if (response.error !== undefined) {
+                        if (response.error.error_code !== undefined && response.error.error_code === 5) {
+                            chrome.storage.local.remove(VK_ACCESS_TOKEN_STORAGE_KEY, () => {
+                                location.reload(true);
+                            });
+                        } else {
+                            displayErrors([`Photo fetch error: $(response.error)`]);
+                        }
+                    } else if (response.result !== undefined) {
+                        // Get rid of duplicates here using photo id.
+                        let photos = [];
+                        for (let item of response.result.items) {
+                            let photo = item.attachment.photo;
+                            this.photos[photo.id] = photo;
+                            photos[photo.id] = photo;
+                        }
+                        this._nextFrom = response.result.next_from;
+                        callback.call(this, photos);
+                    }
+
+                });
+            }
+        }
 
         function pushPhotosIntoSelect(photos, select) {
             for (let id in photos) {
@@ -36,8 +72,8 @@ $(function () {
                     }
                 }
             });
-            let pickerContainer = select.next("ul.thumbnails");
-            pickerContainer.imagesLoaded(function () {
+            const pickerContainer = select.next("ul.thumbnails");
+            pickerContainer.imagesLoaded(() => {
                 pickerContainer.masonry({
                     itemSelector: "li",
                 });
@@ -47,12 +83,12 @@ $(function () {
         if (items[VK_ACCESS_TOKEN_STORAGE_KEY].length === undefined) {
             initLayout();
             displayErrors([chrome.i18n.getMessage("authNeededMsg")]);
-            let authBtn = $('<button type="button" class="btn btn-primary vk-auth-btn">' +
+            const authBtn = $('<button type="button" class="btn btn-primary vk-auth-btn">' +
                 chrome.i18n.getMessage("authBtnTxt") + '</button>');
-            let container = $(".container");
+            const container = $(".container");
             container.append(authBtn);
-            authBtn.click(function () {
-                chrome.runtime.sendMessage({action: "auth"}, function (response) {
+            authBtn.click(() => {
+                chrome.runtime.sendMessage({action: "auth"}, (response) => {
                     if (response.error !== undefined) {
                         initLayout();
                         displayErrors([response.error]);
@@ -62,43 +98,43 @@ $(function () {
                 });
             });
         } else {
-            let selectClass = 'photo-select';
-            let selectTag = '<select multiple="multiple" class="image-picker masonry">';
-            let select = $(selectTag);
+            const selectClass = 'photo-select';
+            const selectTag = '<select multiple="multiple" class="image-picker masonry">';
+            const select = $(selectTag);
             select.addClass(selectClass);
             imagesContainer.append(select);
-            let photoFetcher = new PhotoFetcher();
-            photoFetcher.fetchNext(function (photos) {
+            const photoFetcher = new PhotoFetcher();
+            photoFetcher.fetchNext((photos) => {
                 pushPhotosIntoSelect(photos, select);
             });
-            let btnWrapper = $('.btn-wrapper');
-            let btnLabelWrapper = $('<div class="btn-label-wrapper">' + chrome.i18n.getMessage("photosCounterLabel") +
+            const btnWrapper = $('.btn-wrapper');
+            const btnLabelWrapper = $('<div class="btn-label-wrapper">' + chrome.i18n.getMessage("photosCounterLabel") +
                 '<span class="photos-chosen-counter">0</span></div>');
             btnWrapper.append(btnLabelWrapper);
-            let moreBtn = $('<button type="button" class="btn btn-primary more-btn">' +
+            const moreBtn = $('<button type="button" class="btn btn-primary more-btn">' +
                 chrome.i18n.getMessage("getMorePhotosBtnTxt") + '</button>');
             btnWrapper.append(moreBtn);
-            moreBtn.click(function () {
-                let divider = $('<hr />');
+            moreBtn.click(() => {
+                const divider = $('<hr />');
                 imagesContainer.append(divider);
-                let select = $(selectTag);
+                const select = $(selectTag);
                 select.addClass(selectClass);
                 imagesContainer.append(select);
-                photoFetcher.fetchNext(function (photos) {
+                photoFetcher.fetchNext((photos) => {
                     pushPhotosIntoSelect(photos, select);
                     $('html, body').animate({
                         scrollTop: divider.offset().top
                     }, 1000);
                 });
             });
-            let downloadBtn = $('<button type="button" class="btn btn-primary download-btn" disabled>' +
+            const downloadBtn = $('<button type="button" class="btn btn-primary download-btn" disabled>' +
                 chrome.i18n.getMessage("downloadBtnTxt") + '</button>');
             btnWrapper.append(downloadBtn);
-            downloadBtn.click(function () {
-                $('.' + selectClass).children('option:selected').each(function (index) {
-                    let id = this.value;
-                    let photo = photoFetcher.photos[id];
-                    let link = getPhotoBestResolutionLink(photo);
+            downloadBtn.click(() => {
+                $(`.${selectClass}`).children('option:selected').each((index, element) => {
+                    const id = element.value;
+                    const photo = photoFetcher.photos[id];
+                    const link = getPhotoBestResolutionLink(photo);
                     chrome.downloads.download({
                         url: link
                     });
@@ -107,67 +143,31 @@ $(function () {
         }
     });
 
-    function PhotoFetcher() {
-        this.photos = [];
-        this._nextFrom = "0";
-    }
-
-    PhotoFetcher.prototype.fetchNext = function (callback) {
-        let self = this;
-        chrome.runtime.sendMessage({
-            action: "fetchPhotoAttachments",
-            messageId: messageId,
-            nextFrom: this._nextFrom
-        }, function (response) {
-            if (response.error !== undefined) {
-                if (response.error.error_code !== undefined && response.error.error_code === 5) {
-                    chrome.storage.local.remove(VK_ACCESS_TOKEN_STORAGE_KEY, function () {
-                        location.reload(true);
-                    });
-                } else {
-                    displayErrors(['Photo fetch error: ' + response.error]);
-                }
-            } else if (response.result !== undefined) {
-                let items = response.result.items;
-                // Get rid of duplicates here using photo id.
-                let photos = [];
-                for (let i = 0, j = items.length; i < j; i++) {
-                    let photo = items[i].attachment.photo;
-                    self.photos[photo.id] = photo;
-                    photos[photo.id] = photo;
-                }
-                self._nextFrom = response.result.next_from;
-                callback.call(self, photos);
-            }
-
-        });
-    };
-
     function displayErrors(errors) {
-        let errorsContainer = $('.errors-container');
+        const errorsContainer = $('.errors-container');
         errorsContainer.empty();
-        for (let i = 0, j = errors.length; i < j; i++) {
-            errorsContainer.append('<div class="error">' + errors[i] + '</div>');
+        for (let error of errors) {
+            errorsContainer.append('<div class="error">' + error + '</div>');
         }
     }
 
     function initLayout() {
-        let container = $(".container");
+        const container = $(".container");
         container.empty();
-        let errorContainer = $('<div class="errors-container bg-danger"></div>');
+        const errorContainer = $('<div class="errors-container bg-danger"></div>');
         container.append(errorContainer);
-        let imagesContainer = $('<div class="images-container"></div>');
+        const imagesContainer = $('<div class="images-container"></div>');
         container.append(imagesContainer);
-        let btnWrapper = $('<div class="btn-wrapper"></div>');
+        const btnWrapper = $('<div class="btn-wrapper"></div>');
         container.append(btnWrapper);
     }
 
     function getPhotoBestResolutionLink(photo) {
         let link = "";
         let sizePriorities = ["2560", "1280", "807", "604", "130", "75"];
-        for (let i = 0, j = sizePriorities.length; i < j; i++) {
-            if(photo["photo_" + sizePriorities[i]] !== undefined) {
-                link = photo["photo_" + sizePriorities[i]];
+        for (let sizePriority of sizePriorities) {
+            if(photo["photo_" + sizePriority] !== undefined) {
+                link = photo["photo_" + sizePriority];
                 break;
             }
         }
