@@ -1,6 +1,6 @@
 (function () {
     "use strict";
-    chrome.tabs.query({"active": true, "lastFocusedWindow": true}, function (tabs) {
+    chrome.tabs.query({"active": true, "lastFocusedWindow": true}, (tabs) => {
         const url = tabs[0].url;
         const urlParser = document.createElement('a');
         urlParser.href = url;
@@ -27,8 +27,7 @@
             container[0].appendChild(fetchBtnWrapper);
             document.body.appendChild(fetchBtnWrapper);
             fetchBtn.addEventListener("click", () => {
-                chrome.tabs.create({url: `fetch.html?messageId=${messageId}`, selected: true}, function (tab) {});
-
+                chrome.tabs.create({url: `fetch.html?messageId=${messageId}`, selected: true}, () => {});
             });
         } else {
             displayErrors([chrome.i18n.getMessage("outOfDialogPageMsg")]);

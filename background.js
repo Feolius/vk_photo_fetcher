@@ -2,7 +2,7 @@
     "use strict";
     const VK_ACCESS_TOKEN_STORAGE_KEY = 'pf_vkaccess_token';
     const VK_API_URL = "https://api.vk.com/method";
-    const VK_API_VERSION = "5.73";
+    const VK_API_VERSION = "5.76";
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         request.action = request.action || "";
         if (request.action === "auth") {
@@ -10,16 +10,17 @@
             chrome.tabs.create({url: registerLink, selected: true}, (authTab) => {
                 function authTabUpdateCb(tabId, changeInfo, tab) {
                     if (authTab.id === tabId && changeInfo.status !== undefined && changeInfo.status === "loading") {
-                        const vkAccessToken = fetchParamValueFromUrl(changeInfo.url, "access_token");
+                        let vkAccessToken = fetchParamValueFromUrl(changeInfo.url, "access_token");
                         let response = {result: "Ok"};
                         if (vkAccessToken !== "") {
-                            chrome.storage.local.set({[VK_ACCESS_TOKEN_STORAGE_KEY]: vkAccessToken});
-                            chrome.tabs.remove(tabId, function () {
-                                chrome.tabs.onUpdated.removeListener(authTabUpdateCb);
-                                sendResponse(response);
+                            chrome.storage.local.set({pf_vkaccess_token: vkAccessToken}, () => {
+                                chrome.tabs.remove(tabId, () => {
+                                    chrome.tabs.onUpdated.removeListener(authTabUpdateCb);
+                                    sendResponse(response);
+                                });
                             });
                         } else {
-                            const error = fetchParamValueFromUrl(changeInfo.url, "error_description");
+                            let error = fetchParamValueFromUrl(changeInfo.url, "error_description");
                             if (error === "") {
                                 error = "Unknown VK auth error";
                             }

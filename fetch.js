@@ -7,8 +7,8 @@ $(function () {
     urlParser.href = currentUrl;
     let paramsKeysValues = urlParser.search.substring(1).split("&");
     let messageId = "";
-    for (let i = 0; i < paramsKeysValues.length; i++) {
-        let paramKeyValue = paramsKeysValues[i].split("=");
+    for (let paramsKeysValue of paramsKeysValues) {
+        let paramKeyValue = paramsKeysValue.split("=");
         if (paramKeyValue[0] === "messageId") {
             messageId = paramKeyValue[1];
         }
