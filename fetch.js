@@ -16,9 +16,10 @@ $(function () {
 
     class PhotoFetcher {
         constructor() {
-            this.photos = [];
+            this.photos = {};
             this._nextFrom = "0";
         }
+
         fetchNext() {
             return new Promise((resolve, reject) => {
                 chrome.runtime.sendMessage({
@@ -33,21 +34,15 @@ $(function () {
                         let photos = [];
                         for (let item of response.result.items) {
                             const photo = item.attachment.photo;
-                            // const originalSizes = photo.sizes.slice();
-                            // const sizes = {};
-                            // originalSizes.forEach((size) => {
-                            //      sizes[size.type] = size;
-                            // });
-                            // this.photos[photo.id] = photo;
-                            photos[photo.id] = photo;
+                            const originalSizes = photo.sizes.slice();
+                            const sizes = {};
+                            for (let size of originalSizes) {
+                                sizes[size.type] = size;
+                            }
+                            photo.sizes = sizes;
+                            photos.push(photo);
+                            this.photos[photo.id] = photo;
                         }
-                        // photos.forEach((photo, index, array) => {
-                        //     const originalSizes = photo.sizes.slice();
-                        //     photo.sizes = {};
-                        //     originalSizes.forEach((size) => {
-                        //         photo.sizes[size.type] = size;
-                        //     });
-                        // });
                         this._nextFrom = response.result.next_from;
                         resolve(photos);
                     }
@@ -62,17 +57,17 @@ $(function () {
         let photosChosenCounter = 0;
 
         function pushPhotosIntoSelect(photos, select) {
-            for (let id in photos) {
-                if (photos.hasOwnProperty(id)) {
-                    let photo = photos[id];
-                    select.append('<option data-img-src="' + photo.photo_604 + '" value="' + id + '">Option' + id + '</option>');
+            for (let photo of photos) {
+                const thumbLink = getPhotoThumbnailLink(photo);
+                if (thumbLink !== "") {
+                    select.append('<option data-img-src="' + thumbLink + '" value="' + photo.id + '">Option' + photo.id + '</option>');
                 }
             }
             select.imagepicker({
                 changed: function (oldValues, newValues) {
                     photosChosenCounter = photosChosenCounter + newValues.length - oldValues.length;
                     $('.photos-chosen-counter').html(photosChosenCounter);
-                    if(photosChosenCounter === 0) {
+                    if (photosChosenCounter === 0) {
                         $('.download-btn').prop("disabled", true);
                     } else {
                         $('.download-btn').prop("disabled", false);
@@ -183,10 +178,22 @@ $(function () {
 
     function getPhotoBestResolutionLink(photo) {
         let link = "";
-        let sizePriorities = ["2560", "1280", "807", "604", "130", "75"];
-        for (let sizePriority of sizePriorities) {
-            if(photo["photo_" + sizePriority] !== undefined) {
-                link = photo["photo_" + sizePriority];
+        const sizePriority = ["w", "z", "y", "x", "m", "s"];
+        for (let size of sizePriority) {
+            if (photo.sizes[size] !== undefined) {
+                link = photo.sizes[size].url;
+                break;
+            }
+        }
+        return link;
+    }
+
+    function getPhotoThumbnailLink(photo) {
+        let link = "";
+        const sizePriority = ["x", "m", "s"];
+        for (let size of sizePriority) {
+            if (photo.sizes[size] !== undefined) {
+                link = photo.sizes[size].url;
                 break;
             }
         }

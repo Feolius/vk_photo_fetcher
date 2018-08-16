@@ -2,7 +2,7 @@
     "use strict";
     const VK_ACCESS_TOKEN_STORAGE_KEY = 'pf_vkaccess_token';
     const VK_API_URL = "https://api.vk.com/method";
-    const VK_API_VERSION = "5.76";
+    const VK_API_VERSION = "5.80";
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         request.action = request.action || "";
         if (request.action === "auth") {
