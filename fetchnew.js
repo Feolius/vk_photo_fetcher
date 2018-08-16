@@ -32,22 +32,10 @@ $(function () {
                         // Get rid of duplicates here using photo id.
                         let photos = [];
                         for (let item of response.result.items) {
-                            const photo = item.attachment.photo;
-                            // const originalSizes = photo.sizes.slice();
-                            // const sizes = {};
-                            // originalSizes.forEach((size) => {
-                            //      sizes[size.type] = size;
-                            // });
-                            // this.photos[photo.id] = photo;
+                            let photo = item.attachment.photo;
+                            this.photos[photo.id] = photo;
                             photos[photo.id] = photo;
                         }
-                        // photos.forEach((photo, index, array) => {
-                        //     const originalSizes = photo.sizes.slice();
-                        //     photo.sizes = {};
-                        //     originalSizes.forEach((size) => {
-                        //         photo.sizes[size.type] = size;
-                        //     });
-                        // });
                         this._nextFrom = response.result.next_from;
                         resolve(photos);
                     }
@@ -55,6 +43,28 @@ $(function () {
                 });
             });
         }
+    }
+
+    class PhotosDisplayHandler {
+        constructor(container) {
+            this._container = container;
+            this._photos = [];
+            this._photosIdsSelected = [];
+        }
+
+        addPhotos(photos) {
+
+        }
+
+        get photosIdsSelected() {
+            return this._photosIdsSelected;
+        }
+
+        _initLayout() {
+
+        }
+
+
     }
 
     chrome.storage.local.get({[VK_ACCESS_TOKEN_STORAGE_KEY]: {}}, (items) => {
@@ -105,16 +115,13 @@ $(function () {
                 });
             });
         } else {
-            const selectClass = 'photo-select';
-            const selectTag = '<select multiple="multiple" class="image-picker masonry">';
-            const select = $(selectTag);
-            select.addClass(selectClass);
-            imagesContainer.append(select);
+            const displayHandler = new PhotosDisplayHandler(imagesContainer);
             const photoFetcher = new PhotoFetcher();
             photoFetcher.fetchNext()
                 .then((photos) => {
-                    pushPhotosIntoSelect(photos, select);
+                    displayHandler.addPhotos(photos);
                 }, errorHandler);
+
             const btnWrapper = $('.btn-wrapper');
             const btnLabelWrapper = $('<div class="btn-label-wrapper">' + chrome.i18n.getMessage("photosCounterLabel") +
                 '<span class="photos-chosen-counter">0</span></div>');
@@ -123,31 +130,21 @@ $(function () {
                 chrome.i18n.getMessage("getMorePhotosBtnTxt") + '</button>');
             btnWrapper.append(moreBtn);
             moreBtn.click(() => {
-                const divider = $('<hr />');
-                imagesContainer.append(divider);
-                const select = $(selectTag);
-                select.addClass(selectClass);
-                imagesContainer.append(select);
                 photoFetcher.fetchNext()
                     .then((photos) => {
-                        pushPhotosIntoSelect(photos, select);
-                        $('html, body').animate({
-                            scrollTop: divider.offset().top
-                        }, 1000);
+                        displayHandler.addPhotos(photos);
                     }, errorHandler);
             });
             const downloadBtn = $('<button type="button" class="btn btn-primary download-btn" disabled>' +
                 chrome.i18n.getMessage("downloadBtnTxt") + '</button>');
             btnWrapper.append(downloadBtn);
             downloadBtn.click(() => {
-                $(`.${selectClass}`).children('option:selected').each((index, element) => {
-                    const id = element.value;
-                    const photo = photoFetcher.photos[id];
-                    const link = getPhotoBestResolutionLink(photo);
+                const photoIds = displayHandler.photosIdsSelected;
+                for (let photoId of photoIds) {
                     chrome.downloads.download({
-                        url: link
+                        url: getPhotoBestResolutionLink(photoFetcher.photos[photoId])
                     });
-                });
+                }
             });
         }
     });
