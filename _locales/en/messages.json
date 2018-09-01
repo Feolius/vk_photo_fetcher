@@ -14,8 +14,17 @@
   "getMorePhotosBtnTxt": {
     "message": "Get more photos"
   },
+  "noMorePhotosMsg": {
+    "message": "No more photos"
+  },
   "downloadBtnTxt": {
     "message": "Download"
+  },
+  "selectAllBtnTxt": {
+    "message": "Select All"
+  },
+  "deselectAllBtnTxt": {
+    "message": "Clear All"
   },
   "authNeededMsg": {
     "message": "Authorisation needed. Click to authorize in VK."

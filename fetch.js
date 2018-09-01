@@ -2,22 +2,12 @@ const VK_ACCESS_TOKEN_STORAGE_KEY = 'pf_vkaccess_token';
 $(function () {
     "use strict";
     initLayout();
-    let currentUrl = window.location.href;
-    let urlParser = document.createElement('a');
-    urlParser.href = currentUrl;
-    let paramsKeysValues = urlParser.search.substring(1).split("&");
-    let messageId = "";
-    for (let paramsKeysValue of paramsKeysValues) {
-        let paramKeyValue = paramsKeysValue.split("=");
-        if (paramKeyValue[0] === "messageId") {
-            messageId = paramKeyValue[1];
-        }
-    }
+    const messageId = getMessageIdFromUrl();
+    const photoStorage = {};
 
     class PhotoFetcher {
         constructor() {
-            this.photos = {};
-            this._nextFrom = "0";
+            this._nextFrom = "";
         }
 
         fetchNext() {
@@ -30,57 +20,210 @@ $(function () {
                     if (response.error !== undefined) {
                         reject(response.error);
                     } else if (response.result !== undefined) {
-                        // Get rid of duplicates here using photo id.
-                        let photos = [];
+                        const photos = [];
                         for (let item of response.result.items) {
                             const photo = item.attachment.photo;
-                            const originalSizes = photo.sizes.slice();
-                            const sizes = {};
-                            for (let size of originalSizes) {
-                                sizes[size.type] = size;
+                            // Add photo only if it was not added before. Duplicates can be here due to messages reposts.
+                            if (photoStorage[photo.id] === undefined) {
+                                // Make sizes accessible by keys.
+                                const originalSizes = photo.sizes.slice();
+                                const sizes = {};
+                                for (let size of originalSizes) {
+                                    sizes[size.type] = size;
+                                }
+                                photo.sizes = sizes;
+                                photos.push(photo);
+                                photoStorage[photo.id] = photo;
                             }
-                            photo.sizes = sizes;
-                            photos.push(photo);
-                            this.photos[photo.id] = photo;
                         }
-                        this._nextFrom = response.result.next_from;
+                        // Undefined next_from means that there is no more photos to download.
+                        this._nextFrom = response.result.next_from !== undefined ? response.result.next_from : "";
                         resolve(photos);
                     }
-
                 });
             });
+        }
+    }
+
+    class PhotosDisplayHandler {
+        constructor(container) {
+            this._container = container;
+            // Store info about currently selected photos grouped by date.
+            this._dayBlocksSelected = {};
+            // Store info about all photos inside container grouped by date. Why map? Because order is important!
+            this._dayBlocks = new Map();
+            // Array of subscribers to notify about changes in photos selection.
+            this._onSelectPhotoObservers = [];
+        }
+
+        addPhotos(photos) {
+            let isFirstCall = false;
+            if (this._dayBlocks.size === 0) {
+                isFirstCall = true;
+            }
+            const dayBlocks = new Map();
+            for (let photo of photos) {
+                const dateStr = PhotosDisplayHandler.getDayBlockKey(photo);
+                if (!dayBlocks.has(dateStr)) {
+                    dayBlocks.set(dateStr, []);
+                }
+                dayBlocks.get(dateStr).push(photo);
+            }
+            this._mergeDayBlocks(dayBlocks);
+
+            // Remove first day block container if exists to avoid merged photos conflicts or duplicates.
+            const firstDayBlockDate = dayBlocks.keys().next().value;
+            $(`#day-block-${firstDayBlockDate}`).remove();
+
+            const selectTag = '<select multiple="multiple" class="image-picker photo-select">';
+            for (let dayBlockKey of dayBlocks.keys()) {
+                const dayBlockWrapper = $(`<div id="day-block-${dayBlockKey}" class="day-block"></div>`);
+                const dayBlockDate = $(`<div class="day-block-date">${PhotosDisplayHandler.getDayBlockLabelByKey(dayBlockKey)}</div>`);
+                dayBlockWrapper.append(dayBlockDate);
+                const select = $(selectTag);
+                dayBlockWrapper.append(select);
+                for (let photo of dayBlocks.get(dayBlockKey)) {
+                    const thumbLink = PhotosDisplayHandler.getPhotoThumbnailLink(photo);
+                    if (thumbLink !== "") {
+                        select.append('<option data-img-src="' + thumbLink + '" value="' + photo.id + '">Option' + photo.id + '</option>');
+                    }
+                }
+                this._container.append(dayBlockWrapper);
+                select.imagepicker({
+                    changed: (oldPhotoIds, newPhotoIds) => {
+                        this._imagepickerOnChanged(oldPhotoIds, newPhotoIds);
+                    }
+                });
+            }
+            if (!isFirstCall) {
+                $('html, body').animate({
+                    scrollTop: $(`#day-block-${firstDayBlockDate}`).offset().top
+                }, 1000);
+            }
+        }
+
+        _imagepickerOnChanged(oldPhotoIds, newPhotoIds) {
+            const addedPhotoIds = newPhotoIds.filter((photoId) => oldPhotoIds.indexOf(photoId) < 0);
+            const removedPhotoIds = oldPhotoIds.filter((photoId) => newPhotoIds.indexOf(photoId) < 0);
+            for (let photoId of addedPhotoIds) {
+                const photo = photoStorage[photoId];
+                this._selectPhoto(photo);
+            }
+            for (let photoId of removedPhotoIds) {
+                const photo = photoStorage[photoId];
+                this._deselectPhoto(photo);
+            }
+        }
+
+        _selectPhoto(photo) {
+            const dayBlockKey = PhotosDisplayHandler.getDayBlockKey(photo);
+            if (this._dayBlocksSelected[dayBlockKey] === undefined) {
+                this._dayBlocksSelected[dayBlockKey] = {};
+            }
+            this._dayBlocksSelected[dayBlockKey][photo.id] = photo;
+            this._notifyOnSelectObservers();
+        }
+
+        _deselectPhoto(photo) {
+            const dayBlockKey = PhotosDisplayHandler.getDayBlockKey(photo);
+            delete this._dayBlocksSelected[dayBlockKey][photo.id];
+            this._notifyOnSelectObservers();
+        }
+
+        // This method merge new day blocks with existing. Takes care about correct boundary day block merging.
+        _mergeDayBlocks(dayBlocks) {
+            // First of all, need to check if first key in new map exists in storage map.
+            const firstDate = dayBlocks.keys().next().value;
+            if (this._dayBlocks.has(firstDate)) {
+                // We need to merge boundary photos.
+                const mergedPhotos = this._dayBlocks.get(firstDate).concat(dayBlocks.get(firstDate));
+                dayBlocks.set(firstDate, mergedPhotos);
+            }
+            for (let date of dayBlocks.keys()) {
+                this._dayBlocks.set(date, dayBlocks.get(date));
+            }
+        }
+
+        static getDayBlockKey(photo) {
+            const date = new Date(photo.date * 1000);
+            return `${date.getDate()}-${date.getMonth()}-${date.getFullYear()}`;
+        }
+
+        static getDayBlockLabelByKey(dayBlockKey) {
+            const dayBlockKeyParts = dayBlockKey.split('-');
+            if (dayBlockKeyParts[0].length === 1) {
+                dayBlockKeyParts[0] = '0' + dayBlockKeyParts[0];
+            }
+            if (dayBlockKeyParts[1].length === 1) {
+                dayBlockKeyParts[1] = '0' + dayBlockKeyParts[1];
+            }
+            return dayBlockKeyParts.join('.');
+        }
+
+        getPhotosIdsSelected() {
+            const photoIds = [];
+            for (let date of Object.keys(this._dayBlocksSelected)) {
+                for (let photoId of Object.keys(this._dayBlocksSelected[date])) {
+                    photoIds.push(photoId);
+                }
+            }
+            return photoIds;
+        }
+
+        selectAll() {
+            $('.day-block select option').prop('selected', true);
+            $('.day-block select').each((index, selectElement) => {
+                $(selectElement).data('picker').sync_picker_with_select();
+            });
+            this._dayBlocksSelected = {};
+            for(let dayBlockKey of this._dayBlocks.keys()) {
+                const photos = this._dayBlocks.get(dayBlockKey);
+                this._dayBlocksSelected[dayBlockKey] = {};
+                for(let photo of photos) {
+                    this._dayBlocksSelected[dayBlockKey][photo.id] = photo;
+                }
+            }
+            this._notifyOnSelectObservers();
+        }
+
+        deselectAll() {
+            $('.day-block select option').prop('selected', false);
+            $('.day-block select').each((index, selectElement) => {
+                $(selectElement).data('picker').sync_picker_with_select();
+            });
+            this._dayBlocksSelected = {};
+            this._notifyOnSelectObservers();
+        }
+
+        static getPhotoThumbnailLink(photo) {
+            let link = "";
+            const sizePriority = ["x", "m", "s"];
+            for (let size of sizePriority) {
+                if (photo.sizes[size] !== undefined) {
+                    link = photo.sizes[size].url;
+                    break;
+                }
+            }
+            return link;
+        }
+
+        _notifyOnSelectObservers() {
+            const photoIdsSelected = this.getPhotosIdsSelected();
+            this._onSelectPhotoObservers.forEach((observer) => observer(photoIdsSelected));
+        }
+
+        onSelectPhotoSubscribe(fn) {
+            this._onSelectPhotoObservers.push(fn);
+        }
+
+        onSelectPhotoUnsubscribe(fn) {
+            this._onSelectPhotoObservers = this._onSelectPhotoObservers.filter((observer) => observer === fn);
         }
     }
 
     chrome.storage.local.get({[VK_ACCESS_TOKEN_STORAGE_KEY]: {}}, (items) => {
         const imagesContainer = $('.images-container');
         let photosChosenCounter = 0;
-
-        function pushPhotosIntoSelect(photos, select) {
-            for (let photo of photos) {
-                const thumbLink = getPhotoThumbnailLink(photo);
-                if (thumbLink !== "") {
-                    select.append('<option data-img-src="' + thumbLink + '" value="' + photo.id + '">Option' + photo.id + '</option>');
-                }
-            }
-            select.imagepicker({
-                changed: function (oldValues, newValues) {
-                    photosChosenCounter = photosChosenCounter + newValues.length - oldValues.length;
-                    $('.photos-chosen-counter').html(photosChosenCounter);
-                    if (photosChosenCounter === 0) {
-                        $('.download-btn').prop("disabled", true);
-                    } else {
-                        $('.download-btn').prop("disabled", false);
-                    }
-                }
-            });
-            const pickerContainer = select.next("ul.thumbnails");
-            pickerContainer.imagesLoaded(() => {
-                pickerContainer.masonry({
-                    itemSelector: "li",
-                });
-            });
-        }
 
         if (items[VK_ACCESS_TOKEN_STORAGE_KEY].length === undefined) {
             initLayout();
@@ -100,60 +243,81 @@ $(function () {
                 });
             });
         } else {
-            const selectClass = 'photo-select';
-            const selectTag = '<select multiple="multiple" class="image-picker masonry">';
-            const select = $(selectTag);
-            select.addClass(selectClass);
-            imagesContainer.append(select);
+            const displayHandler = new PhotosDisplayHandler(imagesContainer);
             const photoFetcher = new PhotoFetcher();
             photoFetcher.fetchNext()
                 .then((photos) => {
-                    pushPhotosIntoSelect(photos, select);
+                    displayHandler.addPhotos(photos);
                 }, errorHandler);
+
             const btnWrapper = $('.btn-wrapper');
+
             const btnLabelWrapper = $('<div class="btn-label-wrapper">' + chrome.i18n.getMessage("photosCounterLabel") +
                 '<span class="photos-chosen-counter">0</span></div>');
             btnWrapper.append(btnLabelWrapper);
+
             const moreBtn = $('<button type="button" class="btn btn-primary more-btn">' +
                 chrome.i18n.getMessage("getMorePhotosBtnTxt") + '</button>');
             btnWrapper.append(moreBtn);
             moreBtn.click(() => {
-                const divider = $('<hr />');
-                imagesContainer.append(divider);
-                const select = $(selectTag);
-                select.addClass(selectClass);
-                imagesContainer.append(select);
                 photoFetcher.fetchNext()
                     .then((photos) => {
-                        pushPhotosIntoSelect(photos, select);
-                        $('html, body').animate({
-                            scrollTop: divider.offset().top
-                        }, 1000);
+                        if (photos.length > 0) {
+                            displayHandler.addPhotos(photos);
+                        } else {
+                            // That means there is no more photos to download.
+                            moreBtn.prop("disabled", true);
+                            moreBtn.html(chrome.i18n.getMessage("noMorePhotosMsg"));
+                        }
                     }, errorHandler);
             });
-            const downloadBtn = $('<button type="button" class="btn btn-primary download-btn" disabled>' +
+
+            const downloadBtn = $('<button type="button" class="btn btn-success download-btn" disabled>' +
                 chrome.i18n.getMessage("downloadBtnTxt") + '</button>');
             btnWrapper.append(downloadBtn);
             downloadBtn.click(() => {
-                $(`.${selectClass}`).children('option:selected').each((index, element) => {
-                    const id = element.value;
-                    const photo = photoFetcher.photos[id];
-                    const link = getPhotoBestResolutionLink(photo);
+                const photoIds = displayHandler.getPhotosIdsSelected();
+                for (let photoId of photoIds) {
                     chrome.downloads.download({
-                        url: link
+                        url: getPhotoBestResolutionLink(photoStorage[photoId])
                     });
-                });
+                }
+            });
+
+            const selectAllBtn = $('<button type="button" class="btn btn-primary select-all-btn">' +
+                chrome.i18n.getMessage("selectAllBtnTxt") + '</button>');
+            btnWrapper.append(selectAllBtn);
+            selectAllBtn.click(() => {
+                displayHandler.selectAll();
+            });
+
+            const deselectAllBtn = $('<button type="button" class="btn btn-danger clear-all-btn" disabled>' +
+                chrome.i18n.getMessage("deselectAllBtnTxt") + '</button>');
+            btnWrapper.append(deselectAllBtn);
+            deselectAllBtn.click(() => {
+                displayHandler.deselectAll();
+            });
+
+            displayHandler.onSelectPhotoSubscribe((photoIdsSelected) => {
+                $('.photos-chosen-counter').html(photoIdsSelected.length);
+                if (photoIdsSelected.length === 0) {
+                    downloadBtn.prop("disabled", true);
+                    deselectAllBtn.prop("disabled", true);
+                } else {
+                    downloadBtn.prop("disabled", false);
+                    deselectAllBtn.prop("disabled", false);
+                }
             });
         }
     });
 
     function errorHandler(error) {
-        if (response.error.error_code !== undefined && response.error.error_code === 5) {
+        if (error.error_code !== undefined && error.error_code === 5) {
             chrome.storage.local.remove(VK_ACCESS_TOKEN_STORAGE_KEY, () => {
                 location.reload(true);
             });
         } else {
-            displayErrors([`Photo fetch error: ${response.error}`]);
+            displayErrors([`Error occurred: ${error.error_msg}`]);
         }
     }
 
@@ -163,6 +327,21 @@ $(function () {
         for (let error of errors) {
             errorsContainer.append('<div class="error">' + error + '</div>');
         }
+    }
+
+    function getMessageIdFromUrl() {
+        const currentUrl = window.location.href;
+        const urlParser = document.createElement('a');
+        urlParser.href = currentUrl;
+        const paramsKeysValues = urlParser.search.substring(1).split("&");
+        let messageId = "";
+        for (let paramsKeysValue of paramsKeysValues) {
+            let paramKeyValue = paramsKeysValue.split("=");
+            if (paramKeyValue[0] === "messageId") {
+                messageId = paramKeyValue[1];
+            }
+        }
+        return messageId;
     }
 
     function initLayout() {
@@ -179,18 +358,6 @@ $(function () {
     function getPhotoBestResolutionLink(photo) {
         let link = "";
         const sizePriority = ["w", "z", "y", "x", "m", "s"];
-        for (let size of sizePriority) {
-            if (photo.sizes[size] !== undefined) {
-                link = photo.sizes[size].url;
-                break;
-            }
-        }
-        return link;
-    }
-
-    function getPhotoThumbnailLink(photo) {
-        let link = "";
-        const sizePriority = ["x", "m", "s"];
         for (let size of sizePriority) {
             if (photo.sizes[size] !== undefined) {
                 link = photo.sizes[size].url;

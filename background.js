@@ -47,7 +47,7 @@
                 if (!isNaN(peerId)) {
                     chrome.storage.local.get({[VK_ACCESS_TOKEN_STORAGE_KEY]: {}}, (items) => {
                         const vkAccessToken = items[VK_ACCESS_TOKEN_STORAGE_KEY];
-                        let apiRequestUrl = `${VK_API_URL}/messages.getHistoryAttachments?peer_id=${peerId}&access_token=${vkAccessToken}&media_type=photo&v=${VK_API_VERSION}`;
+                        let apiRequestUrl = `${VK_API_URL}/messages.getHistoryAttachments?peer_id=${peerId}&access_token=${vkAccessToken}&media_type=photo&photo_sizes=1&v=${VK_API_VERSION}`;
                         if (request.nextFrom !== undefined && request.nextFrom !== "0") {
                             apiRequestUrl += "&start_from=" + request.nextFrom;
                         }

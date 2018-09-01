@@ -14,8 +14,17 @@
   "getMorePhotosBtnTxt": {
     "message": "Показать больше фотографий"
   },
+  "noMorePhotosMsg": {
+    "message": "Больше нет фотографии"
+  },
   "downloadBtnTxt": {
     "message": "Загрузить выбранные"
+  },
+  "selectAllBtnTxt": {
+    "message": "Выбрать все"
+  },
+  "deselectAllBtnTxt": {
+    "message": "Сбросить все"
   },
   "authNeededMsg": {
     "message": "Для дальнейшей работы необходима авторизация. Нажмите на кнопку ниже, чтобы продолжить."
