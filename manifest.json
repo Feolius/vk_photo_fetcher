@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "__MSG_extName__",
-  "version": "0.2.0",
+  "version": "0.2.1",
 
   "description": "__MSG_extDescription__",
   "default_locale": "ru",
@@ -19,5 +19,5 @@
     "scripts": ["background.js"],
     "persistent": true
   },
-  "permissions": [ "tabs", "storage", "downloads", "identity" ,"http://*/*", "https://*/*" ]
+  "permissions": [ "tabs", "storage", "downloads", "http://*/*", "https://*/*" ]
 }
