@@ -3,10 +3,11 @@
     const VK_ACCESS_TOKEN_STORAGE_KEY = 'pf_vkaccess_token';
     const VK_API_URL = "https://api.vk.com/method";
     const VK_API_VERSION = "5.80";
+    const VK_APP_ID = "xxx";
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         request.action = request.action || "";
         if (request.action === "auth") {
-            const registerLink = `https://oauth.vk.com/authorize?client_id=6141259&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=messages&response_type=token&v=${VK_API_VERSION}&state=123456`;
+            const registerLink = `https://oauth.vk.com/authorize?client_id=${VK_APP_ID}&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=messages&response_type=token&v=${VK_API_VERSION}&state=123456`;
             chrome.tabs.create({url: registerLink, selected: true}, (authTab) => {
                 function authTabUpdateCb(tabId, changeInfo, tab) {
                     if (authTab.id === tabId && changeInfo.status !== undefined && changeInfo.status === "loading") {

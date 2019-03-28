@@ -29,9 +29,6 @@
             fetchBtn.addEventListener("click", () => {
                 chrome.tabs.create({url: `fetch.html?messageId=${messageId}`, selected: true}, () => {});
             });
-            displayErrors(['В данный момент расширение скорее всего работать не будет (хотя вы можете попытаться:)).\n' +
-            '        Мы приносим свои извинения! Проблема нам известна, и она связана с API VK. Мы уже связались с поддержкой VK,\n' +
-            '        и надеемся, что в скором времени нам удастся разрешить даннуюс ситуацию. Спасибо за понимание!']);
         } else {
             displayErrors([chrome.i18n.getMessage("outOfDialogPageMsg")]);
         }
