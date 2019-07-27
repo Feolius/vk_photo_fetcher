@@ -2,7 +2,8 @@
     "use strict";
     const VK_ACCESS_TOKEN_STORAGE_KEY = 'pf_vkaccess_token';
     const VK_API_URL = "https://api.vk.com/method";
-    const VK_API_VERSION = "5.80";
+    const VK_API_VERSION = "5.101";
+    const ITEMS_PER_PAGE = 100;
     const VK_APP_ID = "xxx";
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         request.action = request.action || "";
@@ -48,7 +49,7 @@
                 if (!isNaN(peerId)) {
                     chrome.storage.local.get({[VK_ACCESS_TOKEN_STORAGE_KEY]: {}}, (items) => {
                         const vkAccessToken = items[VK_ACCESS_TOKEN_STORAGE_KEY];
-                        let apiRequestUrl = `${VK_API_URL}/messages.getHistoryAttachments?peer_id=${peerId}&access_token=${vkAccessToken}&media_type=photo&photo_sizes=1&v=${VK_API_VERSION}`;
+                        let apiRequestUrl = `${VK_API_URL}/messages.getHistoryAttachments?peer_id=${peerId}&access_token=${vkAccessToken}&media_type=photo&photo_sizes=1&count=${ITEMS_PER_PAGE}&v=${VK_API_VERSION}`;
                         if (request.nextFrom !== undefined && request.nextFrom !== "0") {
                             apiRequestUrl += "&start_from=" + request.nextFrom;
                         }
