@@ -221,6 +221,19 @@ $(function () {
         }
     }
 
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        const type = request.resultType || "";
+        if (type === "auth") {
+            if (request.result === "success") {
+                location.reload();
+            }
+            if (type.result === "error") {
+                initLayout();
+                displayErrors([response.msg]);
+            }
+        }
+    });
+
     chrome.storage.local.get({[VK_ACCESS_TOKEN_STORAGE_KEY]: {}}, (items) => {
         const imagesContainer = $('.images-container');
         let photosChosenCounter = 0;
@@ -237,8 +250,6 @@ $(function () {
                     if (response.error !== undefined) {
                         initLayout();
                         displayErrors([response.error]);
-                    } else {
-                        location.reload(true);
                     }
                 });
             });
