@@ -15,7 +15,7 @@
                         let vkAccessToken = fetchParamValueFromUrl(changeInfo.url, "access_token");
                         let response = {result: "Ok"};
                         if (vkAccessToken !== "") {
-                            chrome.storage.local.set({pf_vkaccess_token: vkAccessToken}, () => {
+                            chrome.storage.local.set({[VK_ACCESS_TOKEN_STORAGE_KEY]: vkAccessToken}, () => {
                                 chrome.tabs.remove(tabId, () => {
                                     chrome.tabs.onUpdated.removeListener(authTabUpdateCb);
                                     sendResponse(response);
@@ -39,46 +39,41 @@
 
         if (request.action === "fetchPhotoAttachments") {
             request.messageId = request.messageId || "";
-            if (request.messageId !== "") {
-                let peerId = Number.parseInt(request.messageId);
-                if (request.messageId.slice(0, 1) === "c") {
-                    // For group chats it is needed to add 2000000000 in order to get proper peer id.
-                    peerId = Number.parseInt(request.messageId.slice(1));
-                    peerId += 2000000000;
-                }
-                if (!isNaN(peerId)) {
-                    chrome.storage.local.get({[VK_ACCESS_TOKEN_STORAGE_KEY]: {}}, (items) => {
-                        const vkAccessToken = items[VK_ACCESS_TOKEN_STORAGE_KEY];
-                        let apiRequestUrl = `${VK_API_URL}/messages.getHistoryAttachments?peer_id=${peerId}&access_token=${vkAccessToken}&media_type=photo&photo_sizes=1&count=${ITEMS_PER_PAGE}&v=${VK_API_VERSION}`;
-                        if (request.nextFrom !== undefined && request.nextFrom !== "0") {
-                            apiRequestUrl += "&start_from=" + request.nextFrom;
-                        }
-                        fetch(apiRequestUrl)
-                            .then((response) => {
-                                if (response.ok) {
-                                    return response.json();
-                                } else {
-                                    throw new Error(`VK messages.getHistoryAttachments api call error. ${response.status}: ${response.statusText}`);
-                                }
-                            })
-                            .then((response) => {
-                                if (response.error === undefined) {
-                                    sendResponse({result: response.response});
-                                } else {
-                                    sendResponse({error: response.error});
-                                }
-                            })
-                            .catch((error) => {
-                                sendResponse({error: error.message});
-                            });
-                    });
-                    return true;
-                } else {
-                    sendResponse({error: "Wrong message id"});
-                }
-            } else {
+            if (request.messageId === "") {
                 sendResponse({error: "Empty message id"});
+                return;
             }
+            const peerId = Number.parseInt(request.messageId);
+            if (isNaN(peerId)) {
+                sendResponse({error: "Wrong message id"});
+                return;
+            }
+            chrome.storage.local.get({[VK_ACCESS_TOKEN_STORAGE_KEY]: {}}, (items) => {
+                const vkAccessToken = items[VK_ACCESS_TOKEN_STORAGE_KEY];
+                let apiRequestUrl = `${VK_API_URL}/messages.getHistoryAttachments?peer_id=${peerId}&access_token=${vkAccessToken}&media_type=photo&photo_sizes=1&count=${ITEMS_PER_PAGE}&v=${VK_API_VERSION}`;
+                if (request.nextFrom !== undefined && request.nextFrom !== "0") {
+                    apiRequestUrl += "&start_from=" + request.nextFrom;
+                }
+                fetch(apiRequestUrl)
+                    .then((response) => {
+                        if (response.ok) {
+                            return response.json();
+                        } else {
+                            throw new Error(`VK messages.getHistoryAttachments api call error. ${response.status}: ${response.statusText}`);
+                        }
+                    })
+                    .then((response) => {
+                        if (response.error === undefined) {
+                            sendResponse({result: response.response});
+                        } else {
+                            sendResponse({error: response.error});
+                        }
+                    })
+                    .catch((error) => {
+                        sendResponse({error: error.message});
+                    });
+            });
+            return true;
         }
     });
 
