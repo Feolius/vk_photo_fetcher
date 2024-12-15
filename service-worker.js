@@ -1,6 +1,6 @@
 const VK_ACCESS_TOKEN_STORAGE_KEY = 'pf_vkaccess_token';
 const VK_API_URL = "https://api.vk.com/method";
-const VK_API_VERSION = "5.101";
+const VK_API_VERSION = "5.199";
 const ITEMS_PER_PAGE = 100;
 const VK_APP_ID = "xxxx";
 
