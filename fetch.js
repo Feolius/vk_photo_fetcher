@@ -2,7 +2,8 @@ const VK_ACCESS_TOKEN_STORAGE_KEY = 'pf_vkaccess_token';
 $(function () {
     "use strict";
     initLayout();
-    const messageId = getMessageIdFromUrl();
+    const urlParser = new URL(window.location.href);
+    const chatId = urlParser.searchParams.get("chatId");
     const photoStorage = {};
 
     class PhotoFetcher {
@@ -14,11 +15,11 @@ $(function () {
             return new Promise((resolve, reject) => {
                 chrome.runtime.sendMessage({
                     action: "fetchPhotoAttachments",
-                    messageId: messageId,
+                    chatId: chatId,
                     nextFrom: this._nextFrom
                 }, (response) => {
                     if (response.error !== undefined) {
-                        reject(response.error);
+                        reject(response);
                     } else if (response.result !== undefined) {
                         const photos = [];
                         for (let item of response.result.items) {
@@ -327,8 +328,11 @@ $(function () {
             chrome.storage.local.remove(VK_ACCESS_TOKEN_STORAGE_KEY, () => {
                 location.reload(true);
             });
+        } else if(error.error !== undefined) {
+            displayErrors([`Error occurred: ${error.error}`]);
         } else {
-            displayErrors([`Error occurred: ${error.error_msg}`]);
+            displayErrors([`Unexpected error occured`]);
+            console.log(error);
         }
     }
 
@@ -338,21 +342,6 @@ $(function () {
         for (let error of errors) {
             errorsContainer.append('<div class="error">' + error + '</div>');
         }
-    }
-
-    function getMessageIdFromUrl() {
-        const currentUrl = window.location.href;
-        const urlParser = document.createElement('a');
-        urlParser.href = currentUrl;
-        const paramsKeysValues = urlParser.search.substring(1).split("&");
-        let messageId = "";
-        for (let paramsKeysValue of paramsKeysValues) {
-            let paramKeyValue = paramsKeysValue.split("=");
-            if (paramKeyValue[0] === "messageId") {
-                messageId = paramKeyValue[1];
-            }
-        }
-        return messageId;
     }
 
     function initLayout() {

@@ -15,12 +15,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
 
         if (action === "fetchPhotoAttachments") {
-            request.messageId = request.messageId || "";
-            if (request.messageId === "") {
+            request.chatId = request.chatId || "";
+            if (request.chatId === "") {
                 sendResponse({error: "Empty message id"});
                 return;
             }
-            const peerId = Number.parseInt(request.messageId);
+            const peerId = Number.parseInt(request.chatId);
             if (isNaN(peerId)) {
                 sendResponse({error: "Wrong message id"});
                 return;
@@ -65,7 +65,7 @@ chrome.webNavigation.onCompleted.addListener(async ({tabId, url}) => {
     if (authTabId === tabId && url) {
         const vkAccessToken = fetchParamValueFromUrl(url, "access_token");
         if (vkAccessToken === "") {
-            let error = fetchParamValueFromUrl(changeInfo.url, "error_description");
+            let error = fetchParamValueFromUrl(url, "error_description");
             if (error === "") {
                 error = "Unknown VK auth error";
             }
