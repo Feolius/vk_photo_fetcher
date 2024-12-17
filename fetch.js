@@ -1,3 +1,8 @@
+/**
+ * @typedef {Object} Error
+ * @property {?number} error_code
+ * @property {?string} error_msg
+ */
 const VK_ACCESS_TOKEN_STORAGE_KEY = 'pf_vkaccess_token';
 $(function () {
     "use strict";
@@ -19,7 +24,7 @@ $(function () {
                     nextFrom: this._nextFrom
                 }, (response) => {
                     if (response.error !== undefined) {
-                        reject(response);
+                        reject(response.error);
                     } else if (response.result !== undefined) {
                         const photos = [];
                         for (let item of response.result.items) {
@@ -323,15 +328,18 @@ $(function () {
         }
     });
 
+    /**
+     * @param {Error} error
+     */
     function errorHandler(error) {
         if (error.error_code !== undefined && error.error_code === 5) {
             chrome.storage.local.remove(VK_ACCESS_TOKEN_STORAGE_KEY, () => {
                 location.reload(true);
             });
-        } else if(error.error !== undefined) {
-            displayErrors([`Error occurred: ${error.error}`]);
+        } else if (error.error_msg !== undefined) {
+            displayErrors([`Error occurred: ${error.error_msg}`]);
         } else {
-            displayErrors([`Unexpected error occured`]);
+            displayErrors([`Unexpected error occurred`]);
             console.log(error);
         }
     }

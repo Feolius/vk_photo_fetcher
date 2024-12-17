@@ -17,12 +17,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (action === "fetchPhotoAttachments") {
             request.chatId = request.chatId || "";
             if (request.chatId === "") {
-                sendResponse({error: "Empty message id"});
+                sendResponse({error: {error_msg: "Empty message id"}});
                 return;
             }
             const peerId = Number.parseInt(request.chatId);
             if (isNaN(peerId)) {
-                sendResponse({error: "Wrong message id"});
+                sendResponse({error: {error_msg: "Wrong message id"}});
                 return;
             }
             const items = await chrome.storage.local.get({[VK_ACCESS_TOKEN_STORAGE_KEY]: {}});
@@ -34,7 +34,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             try {
                 const response = await fetch(apiRequestUrl)
                 if (!response.ok) {
-                    sendResponse({error: `VK messages.getHistoryAttachments api call error. ${response.status}: ${response.statusText}`})
+                    sendResponse({error: {error_msg: `VK messages.getHistoryAttachments api call error. ${response.status}: ${response.statusText}`}})
                     return;
                 }
                 const responseData = await response.json();
@@ -44,7 +44,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 }
                 sendResponse({result: responseData.response});
             } catch (error) {
-                sendResponse({error: error.message});
+                sendResponse({error: {error_msg: error.message}});
             }
         }
     })();
