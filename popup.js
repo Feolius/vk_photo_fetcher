@@ -16,7 +16,6 @@
         fetchBtnWrapper.appendChild(fetchBtn);
         const container = document.getElementsByClassName("container");
         container[0].appendChild(fetchBtnWrapper);
-        document.body.appendChild(fetchBtnWrapper);
         fetchBtn.addEventListener("click", () => {
             chrome.tabs.create({url: `fetch.html?chatId=${chatId}`, selected: true}, () => {});
         });
