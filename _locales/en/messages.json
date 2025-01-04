@@ -24,7 +24,7 @@
     "message": "Select All"
   },
   "deselectAllBtnTxt": {
-    "message": "Clear All"
+    "message": "Clear All Selections"
   },
   "authNeededMsg": {
     "message": "Authorisation needed. Click to authorize in VK."
