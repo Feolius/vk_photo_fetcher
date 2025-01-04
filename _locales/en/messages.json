@@ -40,5 +40,8 @@
   },
   "downloadsFolder": {
     "message": "Downloads"
+  },
+  "groupByDateLabel": {
+    "message": "Group by date"
   }
 }

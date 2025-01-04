@@ -40,5 +40,8 @@
   },
   "downloadsFolder": {
     "message": "Загрузки"
+  },
+  "groupByDateLabel": {
+    "message": "Сгруппировать по дате"
   }
 }

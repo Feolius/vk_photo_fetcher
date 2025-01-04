@@ -157,13 +157,7 @@ $(function () {
 
         static getDayBlockLabelByKey(dayBlockKey) {
             const dayBlockKeyParts = dayBlockKey.split('-');
-            if (dayBlockKeyParts[0].length === 1) {
-                dayBlockKeyParts[0] = '0' + dayBlockKeyParts[0];
-            }
-            if (dayBlockKeyParts[1].length === 1) {
-                dayBlockKeyParts[1] = '0' + dayBlockKeyParts[1];
-            }
-            return dayBlockKeyParts.join('.');
+            return `${dayBlockKeyParts[2]}.${dayBlockKeyParts[1].toString().padStart(2, "0")}.${dayBlockKeyParts[0].toString().padStart(2, "0")}`;
         }
 
         getPhotosIdsSelected() {
@@ -292,24 +286,41 @@ $(function () {
 <span class="label label-default">${chrome.i18n.getMessage("folderLabelTxt")}</span>
 <div class="input-group">
     <span class="input-group-addon">${chrome.i18n.getMessage("downloadsFolder")}/</span>
-    <input id="folder-input" type="text" class="form-control" value="VK-photos" />
-</div>
-</br>`);
+    <input id="downloads-folder" type="text" class="form-control" value="VK-photos" />
+</div>`);
         btnWrapper.append(folderTxtField);
+
+        const groupByDateCheckbox = $(`
+<div class="checkbox">
+  <label>
+    <input id="date-group" type="checkbox" value="">
+    ${chrome.i18n.getMessage("groupByDateLabel")}
+  </label>
+</div>`);
+        btnWrapper.append(groupByDateCheckbox);
         const downloadBtn = $('<button type="button" class="btn btn-success download-btn" disabled>' +
             chrome.i18n.getMessage("downloadBtnTxt") + '</button>');
         btnWrapper.append(downloadBtn);
         downloadBtn.click(async () => {
             const photoIds = displayHandler.getPhotosIdsSelected();
-            const folderParts = $("#folder-input").val().split("/").filter((el) => el !== "");
+            const folderParts = $("#downloads-folder").val().split("/").filter((el) => el !== "");
+            const groupByDate = $("#date-group").is(":checked");
             for (let photoId of photoIds) {
-                const link = getPhotoBestResolutionLink(photoStorage[photoId]);
+                const photo = photoStorage[photoId];
+                const link = getPhotoBestResolutionLink(photo);
                 const fileName = new URL(link).pathname.split("/").slice(-1)[0];
-                const filePathParts = [...folderParts, fileName];
+                const filePathParts = [...folderParts];
+                if (groupByDate) {
+                    const date = new Date(photo.date * 1000);
+                    filePathParts.push(
+                        `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`
+                    );
+                }
+                filePathParts.push(fileName);
                 const filePath = filePathParts.join("/");
                 try {
                     await chrome.downloads.download({
-                        url: getPhotoBestResolutionLink(photoStorage[photoId]),
+                        url: getPhotoBestResolutionLink(photo),
                         filename: filePath
                     });
                 } catch (e) {
