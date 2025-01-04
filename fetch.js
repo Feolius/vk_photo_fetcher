@@ -242,8 +242,6 @@ $(function () {
 
     chrome.storage.local.get({[VK_ACCESS_TOKEN_STORAGE_KEY]: {}}, (items) => {
         const imagesContainer = $('.images-container');
-        let photosChosenCounter = 0;
-
         if (items[VK_ACCESS_TOKEN_STORAGE_KEY].length === undefined) {
             initLayout();
             displayErrors([chrome.i18n.getMessage("authNeededMsg")]);
@@ -259,73 +257,92 @@ $(function () {
                     }
                 });
             });
-        } else {
-            const displayHandler = new PhotosDisplayHandler(imagesContainer);
-            const photoFetcher = new PhotoFetcher();
+            return;
+        }
+        const displayHandler = new PhotosDisplayHandler(imagesContainer);
+        const photoFetcher = new PhotoFetcher();
+        photoFetcher.fetchNext()
+            .then((photos) => {
+                displayHandler.addPhotos(photos);
+            }, errorHandler);
+
+        const btnWrapper = $('.btn-wrapper');
+
+        const btnLabelWrapper = $('<div class="btn-label-wrapper">' + chrome.i18n.getMessage("photosCounterLabel") +
+            '<span class="photos-chosen-counter">0</span></div>');
+        btnWrapper.append(btnLabelWrapper);
+
+        const moreBtn = $('<button type="button" class="btn btn-primary more-btn">' +
+            chrome.i18n.getMessage("getMorePhotosBtnTxt") + '</button>');
+        btnWrapper.append(moreBtn);
+        moreBtn.click(() => {
             photoFetcher.fetchNext()
                 .then((photos) => {
-                    displayHandler.addPhotos(photos);
+                    if (photos.length > 0) {
+                        displayHandler.addPhotos(photos);
+                    } else {
+                        // That means there is no more photos to download.
+                        moreBtn.prop("disabled", true);
+                        moreBtn.html(chrome.i18n.getMessage("noMorePhotosMsg"));
+                    }
                 }, errorHandler);
+        });
 
-            const btnWrapper = $('.btn-wrapper');
-
-            const btnLabelWrapper = $('<div class="btn-label-wrapper">' + chrome.i18n.getMessage("photosCounterLabel") +
-                '<span class="photos-chosen-counter">0</span></div>');
-            btnWrapper.append(btnLabelWrapper);
-
-            const moreBtn = $('<button type="button" class="btn btn-primary more-btn">' +
-                chrome.i18n.getMessage("getMorePhotosBtnTxt") + '</button>');
-            btnWrapper.append(moreBtn);
-            moreBtn.click(() => {
-                photoFetcher.fetchNext()
-                    .then((photos) => {
-                        if (photos.length > 0) {
-                            displayHandler.addPhotos(photos);
-                        } else {
-                            // That means there is no more photos to download.
-                            moreBtn.prop("disabled", true);
-                            moreBtn.html(chrome.i18n.getMessage("noMorePhotosMsg"));
-                        }
-                    }, errorHandler);
-            });
-
-            const downloadBtn = $('<button type="button" class="btn btn-success download-btn" disabled>' +
-                chrome.i18n.getMessage("downloadBtnTxt") + '</button>');
-            btnWrapper.append(downloadBtn);
-            downloadBtn.click(() => {
-                const photoIds = displayHandler.getPhotosIdsSelected();
-                for (let photoId of photoIds) {
-                    chrome.downloads.download({
-                        url: getPhotoBestResolutionLink(photoStorage[photoId])
+        const folderTxtField = $(`
+<span class="label label-default">${chrome.i18n.getMessage("folderLabelTxt")}</span>
+<div class="input-group">
+    <span class="input-group-addon">${chrome.i18n.getMessage("downloadsFolder")}/</span>
+    <input id="folder-input" type="text" class="form-control" value="VK-photos" />
+</div>
+</br>`);
+        btnWrapper.append(folderTxtField);
+        const downloadBtn = $('<button type="button" class="btn btn-success download-btn" disabled>' +
+            chrome.i18n.getMessage("downloadBtnTxt") + '</button>');
+        btnWrapper.append(downloadBtn);
+        downloadBtn.click(async () => {
+            const photoIds = displayHandler.getPhotosIdsSelected();
+            const folderParts = $("#folder-input").val().split("/").filter((el) => el !== "");
+            for (let photoId of photoIds) {
+                const link = getPhotoBestResolutionLink(photoStorage[photoId]);
+                const fileName = new URL(link).pathname.split("/").slice(-1)[0];
+                const filePathParts = [...folderParts, fileName];
+                const filePath = filePathParts.join("/");
+                try {
+                    await chrome.downloads.download({
+                        url: getPhotoBestResolutionLink(photoStorage[photoId]),
+                        filename: filePath
                     });
+                } catch (e) {
+                    displayErrors([e]);
+                    break;
                 }
-            });
+            }
+        });
 
-            const selectAllBtn = $('<button type="button" class="btn btn-primary select-all-btn">' +
-                chrome.i18n.getMessage("selectAllBtnTxt") + '</button>');
-            btnWrapper.append(selectAllBtn);
-            selectAllBtn.click(() => {
-                displayHandler.selectAll();
-            });
+        const selectAllBtn = $('<button type="button" class="btn btn-primary select-all-btn">' +
+            chrome.i18n.getMessage("selectAllBtnTxt") + '</button>');
+        btnWrapper.append(selectAllBtn);
+        selectAllBtn.click(() => {
+            displayHandler.selectAll();
+        });
 
-            const deselectAllBtn = $('<button type="button" class="btn btn-danger clear-all-btn" disabled>' +
-                chrome.i18n.getMessage("deselectAllBtnTxt") + '</button>');
-            btnWrapper.append(deselectAllBtn);
-            deselectAllBtn.click(() => {
-                displayHandler.deselectAll();
-            });
+        const deselectAllBtn = $('<button type="button" class="btn btn-danger clear-all-btn" disabled>' +
+            chrome.i18n.getMessage("deselectAllBtnTxt") + '</button>');
+        btnWrapper.append(deselectAllBtn);
+        deselectAllBtn.click(() => {
+            displayHandler.deselectAll();
+        });
 
-            displayHandler.onSelectPhotoSubscribe((photoIdsSelected) => {
-                $('.photos-chosen-counter').html(photoIdsSelected.length);
-                if (photoIdsSelected.length === 0) {
-                    downloadBtn.prop("disabled", true);
-                    deselectAllBtn.prop("disabled", true);
-                } else {
-                    downloadBtn.prop("disabled", false);
-                    deselectAllBtn.prop("disabled", false);
-                }
-            });
-        }
+        displayHandler.onSelectPhotoSubscribe((photoIdsSelected) => {
+            $('.photos-chosen-counter').html(photoIdsSelected.length);
+            if (photoIdsSelected.length === 0) {
+                downloadBtn.prop("disabled", true);
+                deselectAllBtn.prop("disabled", true);
+            } else {
+                downloadBtn.prop("disabled", false);
+                deselectAllBtn.prop("disabled", false);
+            }
+        });
     });
 
     /**

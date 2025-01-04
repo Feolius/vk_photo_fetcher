@@ -34,5 +34,11 @@
   },
   "photosCounterLabel": {
     "message": "Фотографий выбрано:"
+  },
+  "folderLabelTxt": {
+    "message": "Название папки"
+  },
+  "downloadsFolder": {
+    "message": "Загрузки"
   }
 }
