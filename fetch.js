@@ -9,6 +9,7 @@ $(function () {
     initLayout();
     const urlParser = new URL(window.location.href);
     const chatId = urlParser.searchParams.get("chatId");
+    const groupId = urlParser.searchParams.get("groupId");
     const photoStorage = {};
 
     class PhotoFetcher {
@@ -20,7 +21,8 @@ $(function () {
             return new Promise((resolve, reject) => {
                 chrome.runtime.sendMessage({
                     action: "fetchPhotoAttachments",
-                    chatId: chatId,
+                    chatId,
+                    groupId,
                     nextFrom: this._nextFrom
                 }, (response) => {
                     if (response.error !== undefined) {

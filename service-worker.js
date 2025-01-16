@@ -17,22 +17,31 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (action === "fetchPhotoAttachments") {
             request.chatId = request.chatId || "";
             if (request.chatId === "") {
-                sendResponse({error: {error_msg: "Empty message id"}});
+                sendResponse({error: {error_msg: "Empty chat id"}});
                 return;
             }
             const peerId = Number.parseInt(request.chatId);
             if (isNaN(peerId)) {
-                sendResponse({error: {error_msg: "Wrong message id"}});
+                sendResponse({error: {error_msg: "Wrong chat id"}});
                 return;
             }
             const items = await chrome.storage.local.get({[VK_ACCESS_TOKEN_STORAGE_KEY]: {}});
             const vkAccessToken = items[VK_ACCESS_TOKEN_STORAGE_KEY];
-            let apiRequestUrl = `${VK_API_URL}/messages.getHistoryAttachments?peer_id=${peerId}&access_token=${vkAccessToken}&media_type=photo&photo_sizes=1&count=${ITEMS_PER_PAGE}&v=${VK_API_VERSION}`;
+            const apiRequestUrl = new URL(`${VK_API_URL}/messages.getHistoryAttachments`);
+            apiRequestUrl.searchParams.set("peer_id", peerId);
+            if (request.groupId && !isNaN(Number.parseInt(request.groupId))) {
+                apiRequestUrl.searchParams.set("group_id", request.groupId)
+            }
+            apiRequestUrl.searchParams.set("access_token", vkAccessToken);
+            apiRequestUrl.searchParams.set("media_type", "photo");
+            apiRequestUrl.searchParams.set("photo_sizes", "1");
+            apiRequestUrl.searchParams.set("count", ITEMS_PER_PAGE.toString());
+            apiRequestUrl.searchParams.set("v", VK_API_VERSION);
             if (request.nextFrom !== undefined && request.nextFrom !== "0") {
-                apiRequestUrl += "&start_from=" + request.nextFrom;
+                apiRequestUrl.searchParams.set("start_from", request.nextFrom);
             }
             try {
-                const response = await fetch(apiRequestUrl)
+                const response = await fetch(apiRequestUrl.toString())
                 if (!response.ok) {
                     sendResponse({error: {error_msg: `VK messages.getHistoryAttachments api call error. ${response.status}: ${response.statusText}`}})
                     return;

@@ -1,8 +1,14 @@
 (function () {
     "use strict";
+    /**
+     * @typedef {Object} ChatContext
+     * @property {string} chatId
+     * @property {string|null} groupId
+     */
+
     chrome.tabs.query({"active": true, "lastFocusedWindow": true}, (tabs) => {
-        const chatId = extractChatId(tabs[0].url);
-        if (!chatId) {
+        const chatCtx = extractChatId(tabs[0].url);
+        if (!chatCtx) {
             displayErrors([chrome.i18n.getMessage("outOfDialogPageMsg")]);
             return;
         }
@@ -16,14 +22,18 @@
         fetchBtnWrapper.appendChild(fetchBtn);
         const container = document.getElementsByClassName("container");
         container[0].appendChild(fetchBtnWrapper);
+        let tabUrl = `fetch.html?chatId=${chatCtx.chatId}`;
+        if (chatCtx.groupId) {
+            tabUrl += `&groupId=${chatCtx.groupId}`;
+        }
         fetchBtn.addEventListener("click", () => {
-            chrome.tabs.create({url: `fetch.html?chatId=${chatId}`, selected: true}, () => {});
+            chrome.tabs.create({url: tabUrl, selected: true}, () => {});
         });
     });
 
     /**
      * @param {string} url
-     * @return {string|null}
+     * @returns {ChatContext|null}
      */
     const extractChatId = (url) => {
         const urlParser = new URL(url);
@@ -31,20 +41,29 @@
             return null;
         }
         const pathParts = urlParser.pathname.split("/");
-        // Checking for path urls to match the pattern vk.com/im/convo/{xxxx} where {xxxx} is message id.
+        // Checking for path urls to match the pattern vk.com/im/convo/{xxxx} where {xxxx} is chat id.
         if (pathParts.length === 4 && pathParts.slice(0, 3).join("/") === "/im/convo") {
-            return pathParts[3];
+            return {chatId: pathParts[3], groupId: null};
         }
-        // Checking for old format vk.com/im?sel={xxxx}, where {xxxx} can be group id starting from "c" or numeric id.
-        if (pathParts.length === 2 && urlParser.pathname === "/im") {
+        // Checking for old format vk.com/im?sel={xxxx} and for vk.com/gim12345?sel={xxxx}, where {xxxx} is a chat id.
+        // Chat id may start from "c" for the first link type, in this case it must be increased by 2000000000.
+        // In case of second link, it is a group (community) related id, and 12345 is a group id.
+        if (pathParts.length === 2) {
             const selParam = urlParser.searchParams.get("sel");
+            if (selParam === null) {
+                return null;
+            }
+            if (urlParser.pathname !== "/im" && !urlParser.pathname.startsWith("/gim")) {
+                return null;
+            }
+            const groupId = urlParser.pathname.startsWith("/gim") ? urlParser.pathname.slice(4) : null;
             if (selParam.charAt(0) === "c") {
-                const selNumber = Number.parseInt(selParam.slice(1))
+                const selNumber = Number.parseInt(selParam.slice(1));
                 if (!isNaN(selNumber)) {
-                    return (2000000000 + selNumber).toString()
+                    return {chatId: (2000000000 + selNumber).toString(), groupId}
                 }
             } else {
-                return selParam;
+                return {chatId: selParam, groupId};
             }
         }
         return null;
