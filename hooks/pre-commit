@@ -1,0 +1,16 @@
+#!/usr/bin/python3
+import sys
+
+with open("service-worker.js") as f:
+    while row := f.readline():
+        if row.startswith("const VK_APP_ID"):
+            print(row)
+            if row == "const VK_APP_ID = \"xxxx\";\n":
+                print("pre-commit hook success: VK_APP_ID not changed")
+                sys.exit(0)
+            print("pre-commit hook failed: VK_APP_ID was reassigned")
+            sys.exit(1)
+
+
+print("pre-commit hook failed: VK_APP_ID declaration not found")
+sys.exit(1)

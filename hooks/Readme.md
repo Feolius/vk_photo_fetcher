@@ -1,0 +1,1 @@
+When clone repository from scratch, copy _pre-commit_ file into .git/hooks. This hook will check that app id is not commited accidentally.
