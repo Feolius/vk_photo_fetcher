@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 import sys
 
-with open("service-worker.js") as f:
+with open("src/background.js") as f:
     while row := f.readline():
         if row.startswith("const VK_APP_ID"):
             print(row)
