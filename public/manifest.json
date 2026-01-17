@@ -6,17 +6,17 @@
   "description": "__MSG_extDescription__",
   "default_locale": "ru",
   "icons": {
-    "16": "icon16.png",
-    "48": "icon48.png",
-    "128": "icon128.png"
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   },
   "action": {
-    "default_icon": "icon.png",
+    "default_icon": "icons/icon.png",
     "default_popup": "popup.html"
   },
 
   "background": {
-    "service_worker": "service-worker.js",
+    "service_worker": "background.js",
     "type": "module"
   },
   "permissions": [ "tabs", "storage", "downloads", "webNavigation" ],
