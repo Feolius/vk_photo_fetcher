@@ -20,5 +20,5 @@
     "type": "module"
   },
   "permissions": [ "tabs", "storage", "downloads", "webNavigation" ],
-  "host_permissions": ["https://*.vk.com/*"]
+  "host_permissions": ["https://*.vk.com/*", "https://*.vk.ru/*"]
 }
