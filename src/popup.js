@@ -37,20 +37,20 @@
      */
     const extractChatId = (url) => {
         const urlParser = new URL(url);
-        if (urlParser.hostname !== "vk.com") {
+        if (urlParser.hostname !== "vk.ru") {
             return null;
         }
         const pathParts = urlParser.pathname.split("/");
-        // Checking for path urls to match the pattern vk.com/im/convo/{cid} where {cid} is chat id.
+        // Checking for path urls to match the pattern vk.ru/im/convo/{cid} where {cid} is chat id.
         if (pathParts.length === 4 && pathParts.slice(0, 3).join("/") === "/im/convo") {
             return {chatId: pathParts[3], groupId: null};
         }
-        // Checking for path urls to match the pattern vk.com/gim{gid}/convo/{cid} where {gid} is a group id
+        // Checking for path urls to match the pattern vk.ru/gim{gid}/convo/{cid} where {gid} is a group id
         // and {cid} is chat id. It serves dialogs from inside group (community) page.
         if (pathParts.length === 4 && pathParts[1].startsWith("gim")) {
             return {chatId: pathParts[3], groupId: pathParts[1].slice(3)};
         }
-        // Checking for old format vk.com/im?sel={cid} and for vk.com/gim{gid}?sel={cid}, where {cid} is a chat id.
+        // Checking for old format vk.ru/im?sel={cid} and for vk.ru/gim{gid}?sel={cid}, where {cid} is a chat id.
         // Chat id may start from "c" for the first link type, in this case it must be increased by 2000000000.
         // In case of second link, it is a group (community) related id, and {gid} is a group id.
         if (pathParts.length === 2) {

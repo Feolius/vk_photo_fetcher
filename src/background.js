@@ -1,5 +1,5 @@
 const VK_ACCESS_TOKEN_STORAGE_KEY = 'pf_vkaccess_token';
-const VK_API_URL = "https://api.vk.com/method";
+const VK_API_URL = "https://api.vk.ru/method";
 const VK_API_VERSION = "5.199";
 const ITEMS_PER_PAGE = 100;
 const VK_APP_ID = "xxxx";
@@ -8,7 +8,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     const action = request.action || "";
     (async () => {
         if (action === "auth") {
-            const registerLink = `https://oauth.vk.com/authorize?client_id=${VK_APP_ID}&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=messages&response_type=token&v=${VK_API_VERSION}&state=123456`;
+            const registerLink = `https://oauth.vk.ru/authorize?client_id=${VK_APP_ID}&display=page&redirect_uri=https://oauth.vk.ru/blank.html&scope=messages&response_type=token&v=${VK_API_VERSION}&state=123456`;
             const tab = await chrome.tabs.create({url: registerLink, selected: true});
             chrome.storage.local.set({authTabId: tab.id})
             sendResponse({result: "Ok"});
@@ -64,7 +64,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 const filter = {
     url: [
         {
-            urlMatches: 'https://oauth.vk.com/',
+            urlMatches: 'https://oauth.vk.ru/',
         },
     ],
 };
